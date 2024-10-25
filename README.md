@@ -4,112 +4,63 @@
 [![Integration Tests](https://img.shields.io/jenkins/build?jobUrl=https%3A%2F%2Fjenkins.iudx.io%2Fview%2Fiudx-master%2Fjob%2FIUDX%2520RS-Proxy%2520(master)%2520pipeline%2F&label=Integration%20Tests)](https://jenkins.iudx.io/view/iudx-master/job/IUDX%20RS-Proxy%20(master)%20pipeline/lastBuild/Integration_20Test_20Report/)
 [![Security Test](https://img.shields.io/jenkins/build?jobUrl=https%3A%2F%2Fjenkins.iudx.io%2Fview%2Fiudx-master%2Fjob%2FIUDX%2520RS-Proxy%2520(master)%2520pipeline%2F&label=Security%20Test)](https://jenkins.iudx.io/view/iudx-master/job/IUDX%20RS-Proxy%20(master)%20pipeline/lastBuild/zap/)
 
-![IUDX](./docs/iudx.png)
-
-# iudx-resource-proxy-server
-
-The resource server proxy is [Data Exchange](https://iudx.org.in) data discovery portal.
-The consumers can access data from the resource server proxy using HTTPs.
-
 <p align="center">
-<img src="./docs/RS Proxy.png">
+<img src="./docs/cdpg.png" width="400">
 </p>
 
+# iudx-resource-proxy-server(Rs-proxy-server)
+
+## Introduction
+
+The resource proxy server is Data Exchange(DX) data discovery portal.
+It also facilitates data providers to register a connector to process the request and allows consumers to access data in
+accordance with the provider's access policies.
+The server ensures secure data access by integrating with an authorization server, requiring consumers to present access
+tokens validated through token introspection APIs before serving protected data and supports advanced search
+functionalities like temporal and geo-spatial queries through a data broker(RMQ) integration.
+Consumers can access the data using HTTPs protocols.
+
+<p align="center">
+<img src="./docs/Resource Proxy Server.png">
+</p>
 
 ## Features
 
 - Provides data access from available resources using standard APIs.
-- Search and count APIs for searching through available data: Support for Complex (Temporal +  Attribute), Temporal (Before, during, After) and Attribute searches.
-- Integration with authorization server (token introspection) to serve private data as per the access control policies set by the provider
-- Secure data access over TLS 
-- Scalable, service mesh architecture based implementation using open source components: Vert.X API framework, Postgres for database.
+- Search and count APIs for searching through available data: Support for Complex (Temporal + Attribute), Temporal (
+  Before, during, After) and Attribute searches.
+- Integration with authorization server (token introspection) to serve private data as per the access control policies
+  set by the provider
+- Automate connector registration process for data provider
+- Integrates with AX Auditing server for logging and auditing the access for metering purposes
+- Secure data access over TLS
+- Scalable, service mesh architecture based implementation using open source components: Vert.X API framework, Postgres
+  and RabbitMQ.
 - Hazelcast and Zookeeper based cluster management and service discovery
 
+# Explanation
 
-## Prerequisites 
-### External Dependencies Installation 
+## Understanding Rs Proxy Server
 
-The resource server proxy connects with various external dependencies namely
-- ELK stack 
-- PostgreSQL
-- ImmuDB
+- The section available [here](./docs/Solution_Architecture.md) explains the components/services used in implementing
+  the RS-proxy-server
+- To try out the APIs, import the API collection, postman environment files in postman
 
+Reference : [postman-collection](src/test/resources/IUDX-Resource-Proxy-Server-Consumer-APIs.postman_collection_5.5.0.json), [postman-environment](src/test/resources/Resource-Proxy-Server-Consumer-APIs.postman_environment.json)
 
-Find the installations of the above along with the configurations to modify the database url, port and associated credentials in the appropriate sections
- [here](SETUP.md)
+# How To Guide
 
-## Get Started
+## Setup and Installation
 
-### Docker based
-1. Install docker and docker-compose
-2. Clone this repo
-3. Build the images 
-   ` ./docker/build.sh`
-4. Modify the `docker-compose.yml` file to map the config file you just created
-5. Start the server in production (prod) or development (dev) mode using docker-compose 
-   ` docker-compose up prod `
+Setup and Installation guide is available [here](./docs/SETUP-and-Installation.md)
 
+# Reference
 
-### Maven based
-1. Install java 11 and maven
-2. Use the maven exec plugin based starter to start the server 
-   `mvn clean compile exec:java@proxy-server`
-   
-### JAR based
-1. Install java 11 and maven
-2. Use maven to package the application as a JAR
-   `mvn clean package -Dmaven.test.skip=true`
-3. 2 JAR files would be generated in the `target/` directory
-   - `iudx.rs.proxy-cluster-0.0.1-SNAPSHOT-fat.jar` - clustered vert.x containing micrometer metrics
-   - `iudx.rs.proxy-dev-0.0.1-SNAPSHOT-fat.jar` - non-clustered vert.x and does not contain micrometer metrics
+## API Docs
 
-#### Running the clustered JAR
+API docs are
+available [here](https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/datakaveri/iudx-rs-proxy/master/docs/openapi.yaml)
 
-**Note**: The clustered JAR requires Zookeeper to be installed. Refer [here](https://zookeeper.apache.org/doc/r3.3.3/zookeeperStarted.html) to learn more about how to set up Zookeeper. Additionally, the `zookeepers` key in the config being used needs to be updated with the IP address/domain of the system running Zookeeper.
+## FAQ
 
-The JAR requires 3 runtime arguments when running:
-
-* --config/-c : path to the config file
-* --hostname/-i : the hostname for clustering
-* --modules/-m : comma separated list of module names to deploy
-
-e.g. `java -jar target/iudx.rs.proxy-cluster-0.0.1-SNAPSHOT-fat.jar  --host $(hostname) -c configs/config.json -m iudx.rs.proxy.database.DatabaseVerticle,iudx.rs.proxy.authenticator.AuthenticationVerticle 
-,iudx.rs.proxy.metering.MeteringVerticle,iudx.rs.proxy.database.postgres.PostgresVerticle`
-
-Use the `--help/-h` argument for more information. You may additionally append an `RS_JAVA_OPTS` environment variable containing any Java options to pass to the application.
-
-e.g.
-```
-$ export RS_JAVA_OPTS="-Xmx4096m"
-$ java $RS_JAVA_OPTS -jar target/iudx.rs.proxy-cluster-0.0.1-SNAPSHOT-fat.jar ...
-```
-
-#### Running the non-clustered JAR
-The JAR requires 1 runtime argument when running:
-
-* --config/-c : path to the config file
-
-e.g. `java -Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.Log4j2LogDelegateFactory -jar target/iudx.rs.[proxy]-dev-0.0.1-SNAPSHOT-fat.jar -c configs/config.json`
-
-Use the `--help/-h` argument for more information. You may additionally append an `RS_JAVA_OPTS` environment variable containing any Java options to pass to the application.
-
-e.g.
-```
-$ export RS_JAVA_OPTS="-Xmx1024m"
-$ java $RS_JAVA_OPTS -jar target/iudx.rs.proxy-dev-0.0.1-SNAPSHOT-fat.jar ...
-```
-
-### Encryption
-All the count and search APIs have a feature to get encrypted data.
-The user could provide a `publicKey` in the header, with the value that is generated from [lazySodium sealed box](https://github.com/terl/lazysodium-java/wiki/Getting-started) or [PyNaCl sealed box](https://pynacl.readthedocs.io/en/latest/).
-The header value should be in _url-safe base64 format_.
-The encrypted data could be decrypted using the lazysodium sealed box by supplying the private and public key.
-
-## Contributing
-We follow Git Merge based workflow 
-1. Fork this repo
-2. Create a new feature branch in your fork. Multiple features must have a hyphen separated name, or refer to a milestone name as mentioned in Github -> Projects 
-3. Commit to your fork and raise a Pull Request with upstream
-
-## License
-[View License](./LICENSE)
+FAQs are available [here](./docs/FAQ.md)
