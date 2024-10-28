@@ -21,7 +21,7 @@ functionalities like temporal and geo-spatial queries through a data broker(RMQ)
 Consumers can access the data using HTTPs protocols.
 
 <p align="center">
-<img src="./docs/Resource Proxy Server.png">
+<img src="./docs/Resource Proxy Server Interactions.png">
 </p>
 
 ## Features
