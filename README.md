@@ -8,11 +8,11 @@
 <img src="./docs/cdpg.png" width="400">
 </p>
 
-# iudx-resource-proxy-server(Rs-proxy-server)
+# DX-resource-proxy-server(Rs-proxy-server)
 
 ## Introduction
 
-The resource proxy server is Data Exchange(DX) data discovery portal.
+The DX Resource proxy server is Data Exchange(DX) data discovery portal.
 It also facilitates data providers to register a connector to process the request and allows consumers to access data in
 accordance with the provider's access policies.
 The server ensures secure data access by integrating with an authorization server, requiring consumers to present access
