@@ -8,7 +8,7 @@
 <img src="./docs/cdpg.png" width="400">
 </p>
 
-# DX-resource-proxy-server(Rs-proxy-server)
+# DX-resource-proxy-server(rs-proxy-server)
 
 ## Introduction
 
