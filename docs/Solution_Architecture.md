@@ -27,11 +27,21 @@ about their role and access restrictions.
 
 ### Cache Service
 
-the cache service is used to store frequently accessed data temporarily in memory, allowing for faster
-retrieval compared to fetching the data from a slower, underlying database or storage system. In the context of
-dx catalogue item and revoked tokens related information, the cache service ensures that those data can be retrieved
-quickly when
-needed, without having to query the primary database repeatedly.
+The Cache Service is used to store catalogue items and revoked tokens information. It serves as the first point of
+reference for other services when they need these data items. Here’s how it optimizes data retrieval:
+
+1. **Catalogue Item** :
+    * When catalogue information is needed, services first check the Cache Service.
+    * If the information is not cached, the Cache Service retrieves it from the catalogue server and stores it for
+      future requests.
+2. **Revoked Token** :
+    * For token verification, services first check the Cache Service for revoked tokens.
+    * If the token is not found in the cache, it is verified through the main database, and any revoked token details
+      are then cached for faster future access.
+
+This setup minimizes direct calls to the catalogue server and main database, enhancing efficiency and reducing latency
+in
+data retrieval.
 
 ### Database Service
 
@@ -70,3 +80,17 @@ connectors (queues) for DX Providers.
 The Consent Logging Service is used by the API Server to log user-signed consent data related to Personally Identifiable
 Information (PII) resources. This service ensures that all user consent actions are securely logged and tracked for
 compliance and auditing purposes.
+The CDPG data exchange supports the following consent log types:
+
+1. **CONSENT_CREATED** : Logs when new consent is created.
+2. **CONSENT_REVOKED** : Logs when user consent is revoked.
+3. **DATA_REQUESTED** : Logs when data is requested by a consumer.
+4. **DATA_SENT** : Logs when data is sent to the user.
+5. **DATA_DENIED** : Logs if a data request fails.
+
+The rs-proxy server only interacts with three specific logs:
+
+* **DATA_REQUESTED** : Logged when a data request is made by a consumer.
+* **DATA_SENT** : Logged when rs-proxy successfully provides data to the user.
+* **DATA_DENIED** : Logged if a request fails for any reason.
+
