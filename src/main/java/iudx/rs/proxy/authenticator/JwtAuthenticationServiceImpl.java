@@ -219,6 +219,8 @@ public class JwtAuthenticationServiceImpl implements AuthenticationService {
           LOGGER.error("fail");
           promise.fail("incorrect providerUserId");
         }
+      } else {
+        promise.fail("Invalid role found");
       }
     } catch (Exception e) {
       LOGGER.error("exception occurred while validating provider user : " + e.getMessage());
