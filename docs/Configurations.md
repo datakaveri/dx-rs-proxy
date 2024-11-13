@@ -5,11 +5,23 @@
 # Modules
 
 This document contains the information of the configurations to setup various services and dependencies in order to
-bring up the DX ACL APD Server.
+bring up the DX rs-proxy Server.
 Please find the example configuration
 file [here](https://github.com/datakaveri/iudx-rs-proxy/blob/main/examples/configs/config-dev.json). While running the
 server, config.json file could
 be added [secrets](https://github.com/datakaveri/iudx-rs-proxy/tree/main/secrets/all-verticles-configs).
+```console
+  cp examples/configs/config-dev.json secrets/all-verticles-configs/
+```
+
+```
+Configs directory:
+
+secrets/all-verticles-configs/
+├── config-dev.json
+├── keystore.jks
+└── keystore.p12
+```
 
 ## Other Configuration
 

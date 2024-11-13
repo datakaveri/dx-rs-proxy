@@ -53,6 +53,10 @@ Reference : [postman-collection](src/test/resources/IUDX-Resource-Proxy-Server-C
 
 Setup and Installation guide is available [here](./docs/SETUP-and-Installation.md)
 
+# Tutorial
+Refer video for reference: 
+[Watch Video](https://github.com/user-attachments/assets/37e80da7-14f6-4333-82c3-2d5159184bb2)
+
 # Reference
 ## API Docs
 
