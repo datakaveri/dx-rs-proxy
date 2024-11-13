@@ -37,7 +37,7 @@ starting the deployment of DX Rs-proxy-Server.
 
 #### RabbitMQ
 
-- To setup RabbitMQ refer the setup and installation instructions
+- To set up RabbitMQ refer the setup and installation instructions
   available [here](https://github.com/datakaveri/iudx-deployment/blob/master/Docker-Swarm-deployment/single-node/databroker)
 - After deployment of RabbitMQ, we need to ensure that there are certain prerequisites met. Incase if it is not met,
   please log in to RabbitMQ management portal using the RabbitMQ management UI and create the following
@@ -57,9 +57,9 @@ starting the deployment of DX Rs-proxy-Server.
 
 ##### Create Queue and Bind to Exchange
 
-| Exchange Name        | Queue Name        | vHost         | routing key | Details                                                                                                                                   |  
-|----------------------|-------------------|---------------|-------------|-------------------------------------------------------------------------------------------------------------------------------------------|
-| auditing             | auditing-messages | IUDX-INTERNAL | #           | Create a queue in vHost IUDX-INTERNAL to allow audit information to be consumed. Ensure that the queue is binded to the auditing exchange |
+| Exchange Name | Queue Name        | vHost         | routing key | Details                                                                                                                                   |  
+|---------------|-------------------|---------------|-------------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| auditing      | auditing-messages | IUDX-INTERNAL | #           | Create a queue in vHost IUDX-INTERNAL to allow audit information to be consumed. Ensure that the queue is binded to the auditing exchange |
 
 ##### User and Permissions
 
