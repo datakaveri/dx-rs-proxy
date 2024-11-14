@@ -4,12 +4,12 @@
 
 **Thanks for reporting the vulnerability issue**! :vulcan_salute:
 <br>
-If you find any potential vulnerabilities in Data Exchange servers, please report it to us in a confidential way 
+If you find any potential vulnerabilities in Data Exchange servers, please report it to us in a confidential way
 by adding the following content in the email:
 
 ```
 From: <email-ID>
-To: DX Admin <admin@iudx.org.in>, DX Support <support@iudx.org.in>
+To: DX Admin <admin@iudx.org.in>, DX Support <support@cdpg.org.in>
 Subject: Vulnerability report
 Attachement: <screenshots, reports, videos, etc., > 
 Body:

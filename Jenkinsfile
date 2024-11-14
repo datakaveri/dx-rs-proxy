@@ -70,7 +70,7 @@ pipeline {
     stage('Start RS-Proxy for Integration Testing'){
       steps{
         script{
-            sh 'scp src/test/resources/ADEX-Resource-Proxy-Server-Consumer-APIs.postman_collection_5.5.0.json jenkins@jenkins-master:/var/lib/jenkins/iudx/rs-proxy/Newman/'
+            sh 'scp src/test/resources/ADEX-Resource-Proxy-Server-Consumer-APIs.postman_collection.json jenkins@jenkins-master:/var/lib/jenkins/iudx/rs-proxy/Newman/'
             sh 'docker compose -f docker-compose.test.yml up -d integTest'
             sh 'sleep 30'
         }
@@ -91,7 +91,7 @@ pipeline {
           script{
             startZap ([host: '0.0.0.0', port: 8090, zapHome: '/var/lib/jenkins/tools/com.cloudbees.jenkins.plugins.customtools.CustomTool/OWASP_ZAP/ZAP_2.11.0'])
             sh 'curl http://0.0.0.0:8090/JSON/pscan/action/disableScanners/?ids=10096'
-            sh 'HTTP_PROXY=\'127.0.0.1:8090\' newman run /var/lib/jenkins/iudx/rs-proxy/Newman/ADEX-Resource-Proxy-Server-Consumer-APIs.postman_collection_5.5.0.json -e /home/ubuntu/configs/rs-proxy-postman-env.json -n 2 --insecure -r htmlextra --reporter-htmlextra-export /var/lib/jenkins/iudx/rs-proxy/Newman/report/report.html --reporter-htmlextra-skipSensitiveData'
+            sh 'HTTP_PROXY=\'127.0.0.1:8090\' newman run /var/lib/jenkins/iudx/rs-proxy/Newman/ADEX-Resource-Proxy-Server-Consumer-APIs.postman_collection.json -e /home/ubuntu/configs/rs-proxy-postman-env.json -n 2 --insecure -r htmlextra --reporter-htmlextra-export /var/lib/jenkins/iudx/rs-proxy/Newman/report/report.html --reporter-htmlextra-skipSensitiveData'
             runZapAttack()
             }
         }
@@ -159,7 +159,7 @@ pipeline {
           steps {
             node('built-in') {
               script{
-                sh 'newman run /var/lib/jenkins/iudx/rs-proxy/Newman/ADEX-Resource-Proxy-Server-Consumer-APIs.postman_collection_5.5.0.json -e /home/ubuntu/configs/cd/rs-proxy-postman-env.json --insecure -r htmlextra --reporter-htmlextra-export /var/lib/jenkins/iudx/rs-proxy/Newman/report/cd-report.html --reporter-htmlextra-skipSensitiveData'
+                sh 'newman run /var/lib/jenkins/iudx/rs-proxy/Newman/ADEX-Resource-Proxy-Server-Consumer-APIs.postman_collection.json -e /home/ubuntu/configs/cd/rs-proxy-postman-env.json --insecure -r htmlextra --reporter-htmlextra-export /var/lib/jenkins/iudx/rs-proxy/Newman/report/cd-report.html --reporter-htmlextra-skipSensitiveData'
               }
             }
           }

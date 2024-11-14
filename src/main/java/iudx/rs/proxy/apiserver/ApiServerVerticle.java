@@ -365,7 +365,7 @@ public class ApiServerVerticle extends AbstractVerticle {
     LOGGER.debug("userid : {}", userid);
 
     brokerService.resetPassword(
-        userid, // "dummy-user",
+        userid,
         handler -> {
           if (handler.succeeded()) {
             handleSuccessResponse(response, ResponseType.Ok.getCode(), handler.result().toString());

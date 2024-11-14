@@ -46,7 +46,7 @@ Consumers can access the data using HTTPs protocols.
   the RS-proxy-server
 - To try out the APIs, import the API collection, postman environment files in postman
 
-Reference : [postman-collection](src/test/resources/IUDX-Resource-Proxy-Server-Consumer-APIs.postman_collection_5.5.0.json), [postman-environment](src/test/resources/Resource-Proxy-Server-Consumer-APIs.postman_environment.json)
+Reference : [postman-collection](src/test/resources/IUDX-Resource-Proxy-Server-Consumer-APIs.postman_collection.json), [postman-environment](src/test/resources/Resource-Proxy-Server-Consumer-APIs.postman_environment.json)
 
 # How To Guide
 ## Setup and Installation

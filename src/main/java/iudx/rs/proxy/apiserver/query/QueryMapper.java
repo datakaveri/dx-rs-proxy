@@ -186,6 +186,16 @@ public class QueryMapper {
         ZonedDateTime end = ZonedDateTime.parse(endTime);
         Duration duration = Duration.between(start, end);
         totalDaysAllowed = duration.toDays();
+        LOGGER.debug("totalDaysAllowed:: " + totalDaysAllowed);
+        if (start.isAfter(end)) {
+          isValid = false;
+          DxRuntimeException ex =
+              new DxRuntimeException(
+                  BAD_REQUEST.getValue(),
+                  INVALID_TEMPORAL_PARAM_URN,
+                  "end date is before start date");
+          context.fail(400, ex);
+        }
       } catch (Exception e) {
         isValid = false;
         DxRuntimeException ex =
