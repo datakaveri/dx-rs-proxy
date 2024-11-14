@@ -14,7 +14,7 @@ consumes:
 
 info:
   title: "Data exchange Resource Server Proxy APIs"
-  version: 5.5.0
+  version: 5.6.0
   description: |
     # Introduction
     The Resource Proxy Server is DXs'(Data Exchange) data discovery portal.
@@ -88,8 +88,8 @@ info:
     The application should address them accordingly.
   contact:
     name: For support contact IUDX Team at
-    email: support@iudx.org.in
-    url: https://iudx.org.in/
+    email: support@cdpg.org.in
+    url: https://dataforpublicgood.org.in/
   license:
     name: Apache 2.0
 tags:
@@ -1402,7 +1402,7 @@ paths:
         - Connector
       summary: create connector
       responses:
-        '200':
+        '201':
           description: OK
           content:
             application/json:
@@ -1674,6 +1674,56 @@ paths:
           name: id
           required: true
           description: id is the resource item
+
+
+  /user/resetPassword:
+    post:
+      tags:
+        - Connector
+      summary: Reset user password
+      operationId: resetPassword
+      parameters:
+        - name: token
+          in: header
+          description: 'data exchange auth token for accessing the API'
+          required: true
+          style: simple
+          schema:
+            type: string
+            maxLength: 512
+            pattern: '^[a-zA-Z0-9\/\@\.]*$'
+      description: The reset password API enables updating the connector user's password in RMQ. The API requires the user to provide a valid access token for authentication.
+      x-codeSamples:
+        - lang: 'cURL'
+          label: 'reset password'
+          source: |
+            curl --location --request POST 'https://example.com/ngsi-ld/v1/user/resetPassword' \
+            --header 'token: <tokenValue>'
+
+      responses:
+        200:
+          description: 'User password reset successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/resetpassword'
+
+        401:
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/standardInvalidTokenErrorResponse"
+          description: |-
+            - Unauthorized - `token` invalid/expired
+            - Unauthorized - `clientId` & `clientSecret` invalid/not match
+
+        404:
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/generalResourceNotFoundErrorResponse"
+          description: 'Password not found'
+
     parameters: [ ]
 components:
   schemas:
@@ -2445,3 +2495,44 @@ components:
         type: urn:dx:rs:invalidAuthorizationToken
         title: Not Authorized
         detail: Not Authorized
+
+    resetpassword:
+      title: resetpassword
+      required:
+        - apiKey
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        results:
+          description: An array of objects
+          type: array
+          items:
+            type: object
+      example:
+        type: urn:dx:rs:success
+        title: successful
+        detail: Successfully changed the password
+        results: [
+          { "username": "asasdasd-asdasd-aada-d23342",
+            "apiKey": "asass8a7s"
+          }
+        ]
+
+    generalResourceNotFoundErrorResponse:
+      title: generalResourceNotFoundErrorResponse
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+      example:
+        type: urn:dx:rs:general
+        title: Not Found
+        detail: Not Found
