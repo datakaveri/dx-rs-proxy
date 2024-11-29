@@ -309,8 +309,25 @@ class JwtAuthenticationServiceImplTest {
     jwtData.setIid(
         "ri:datakaveri.org/04a15c9960ffda227e9546f3f46e629e1fe4132b/rs.iudx.io/pune-env-flood/FWR053");
     jwtData.setRole("consumer");
-    jwtData.setCons(new JsonObject().put("access", new JsonArray().add("api")));
 
+    JsonObject access = new JsonObject()
+            .put("api", new JsonObject().put("limit", 1000).put("unit", "number"))
+            .put("sub", new JsonObject().put("limit", 10000).put("unit", "MB"))
+            .put("file", new JsonObject().put("limit", 1000).put("unit", "number"))
+            .put("async", new JsonObject().put("limit", 10000).put("unit", 122));
+
+    JsonArray attrs = new JsonArray()
+            .add("trip_direction")
+            .add("trip_id")
+            .add("location")
+            .add("id")
+            .add("observationDateTime");
+
+    JsonObject cons = new JsonObject()
+            .put("access", access)
+            .put("attrs", attrs);
+
+    jwtData.setCons(cons);
     jwtAuthenticationService
         .validateAccess(jwtData, false, authInfo)
         .onComplete(
