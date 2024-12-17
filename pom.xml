@@ -9,7 +9,7 @@
 
     <properties>
         <vertx.version>4.5.11</vertx.version>
-        <openjdk.version>11</openjdk.version>
+        <openjdk.version>21</openjdk.version>
         <hazelcast.version>4.0.2</hazelcast.version>
         <micrometer.version>1.14.1</micrometer.version>
         <curator.version>5.7.1</curator.version>
