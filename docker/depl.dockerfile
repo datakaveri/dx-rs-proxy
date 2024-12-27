@@ -1,7 +1,7 @@
 ARG VERSION="0.0.1-SNAPSHOT"
 
 # Using maven base image in builder stage to build Java code.
-ROM maven:3-eclipse-temurin-21-jammy as builder
+FROM maven:3-eclipse-temurin-21-jammy as builder
 
 WORKDIR /usr/share/app
 COPY pom.xml .
