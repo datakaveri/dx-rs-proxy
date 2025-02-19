@@ -660,7 +660,7 @@ public class DatabrokerServiceImpl implements DatabrokerService {
         .onComplete(
             ar -> {
               if (ar.succeeded()) {
-                if (ar.result().statusCode() == HttpStatus.SC_NOT_FOUND) {
+                if (ar.result().statusCode() == HttpStatus.SC_NO_CONTENT) {
                   response.put(USER_NAME, userid);
                   response.put(APIKEY, password);
                   LOGGER.debug("user password changed");
@@ -677,8 +677,14 @@ public class DatabrokerServiceImpl implements DatabrokerService {
                 }
               } else {
                 LOGGER.error("User creation failed using mgmt API :", ar.cause());
-                response.put(FAILURE, CHECK_CREDENTIALS);
-                promise.fail(response.toString());
+
+                ResponseBuilder responseBuilder =
+                    new ResponseBuilder(FAILED)
+                        .setTypeAndTitle(
+                            HttpStatus.SC_INTERNAL_SERVER_ERROR,
+                            ResponseUrn.INTERNAL_SERVER_ERROR_URN.getUrn())
+                        .setMessage(CHECK_CREDENTIALS);
+                promise.fail(responseBuilder.getResponse().encode());
               }
             });
     return promise.future();

@@ -2,13 +2,11 @@ package iudx.rs.proxy.apiserver;
 
 import static iudx.rs.proxy.apiserver.response.ResponseUtil.generateResponse;
 import static iudx.rs.proxy.apiserver.util.ApiServerConstants.*;
-import static iudx.rs.proxy.apiserver.util.RequestType.POST_CONNECTOR;
 import static iudx.rs.proxy.apiserver.util.Util.errorResponse;
 import static iudx.rs.proxy.authenticator.Constants.*;
 import static iudx.rs.proxy.common.Constants.*;
 import static iudx.rs.proxy.common.HttpStatusCode.*;
 import static iudx.rs.proxy.common.ResponseUrn.*;
-import static iudx.rs.proxy.databroker.util.Constants.CONNECTOR_ID;
 import static iudx.rs.proxy.metering.util.Constants.DETAIL;
 import static iudx.rs.proxy.metering.util.Constants.ERROR;
 
@@ -46,17 +44,14 @@ import iudx.rs.proxy.common.HttpStatusCode;
 import iudx.rs.proxy.common.ResponseUrn;
 import iudx.rs.proxy.database.DatabaseService;
 import iudx.rs.proxy.databroker.DatabrokerService;
-import iudx.rs.proxy.databroker.DatabrokerServiceOld;
 import iudx.rs.proxy.metering.MeteringService;
 import iudx.rs.proxy.optional.consentlogs.ConsentLoggingService;
-
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -183,13 +178,7 @@ public class ApiServerVerticle extends AbstractVerticle {
 
         new ConnectorController(router, apis, vertx, isAdexInstance, dxApiBasePath).setRouter();
 
-
-        router
-                .post(dxApiBasePath + ApiServerConstants.RESET_PWD)
-                .handler(TokenDecodeHandler.create(vertx))
-                .handler(AuthHandler.create(vertx, apis, isAdexInstance))
-                .handler(this::resetPassword);
-
+        
         /* Static Resource Handler */
         /* Get openapiv3 spec */
         router
@@ -346,79 +335,7 @@ public class ApiServerVerticle extends AbstractVerticle {
         return promise.future();
     }
 
-    public void resetPassword(RoutingContext routingContext) {
-        LOGGER.trace("Info: resetPassword method started");
 
-        HttpServerResponse response = routingContext.response();
-        JsonObject authInfo = (JsonObject) routingContext.data().get("authInfo");
-        LOGGER.debug("authInfo: " + authInfo);
-        String userid = authInfo.getString(USER_ID);
-        LOGGER.debug("userid : {}", userid);
-
-        brokerService.resetPasswordInRmq(
-                        userid, "password")
-                .onSuccess(password -> handleSuccessResponse(response, ResponseType.Ok.getCode(), password.encode()))
-                .onFailure(failure -> handleResponse(response, UNAUTHORIZED, INVALID_TOKEN_URN));
-
-
-    }
-
-
-
-  /*  void handlePostConnectors(RoutingContext routingContext) {
-        LOGGER.trace("handleRegisterAdapter () started");
-        JsonObject requestJson = routingContext.body().asJsonObject();
-        HttpServerRequest request = routingContext.request();
-        HttpServerResponse response = routingContext.response();
-        String instanceId = request.getHeader(HEADER_HOST);
-        requestJson.put(JSON_INSTANCEID, instanceId);
-        JsonObject authInfo = (JsonObject) routingContext.data().get("authInfo");
-        requestJson.put(USER_ID, authInfo.getString(USER_ID));
-        LOGGER.debug("authInfo: {}", authInfo);
-        String resourceId = requestJson.getJsonArray("entities").getJsonObject(0).getString(ID);
-        JsonObject newRequest = new JsonObject();
-        newRequest.put("resourceId", resourceId);
-        newRequest.put("userid", authInfo.getString(USER_ID));
-        brokerService.createConnector(
-                newRequest,
-                connectorHandler -> {
-                    if (connectorHandler.succeeded()) {
-                        LOGGER.info("success: [registerConnector]");
-                        Future.future(fu -> updateAuditTable(routingContext));
-                        handleSuccessResponse(
-                                response, ResponseType.Created.getCode(), connectorHandler.result().toString());
-                        routingContext.data().put(RESPONSE_SIZE, response.bytesWritten());
-                        Future.future(fu -> updateAuditTable(routingContext));
-                    } else {
-                        processBackendResponse(response, connectorHandler.cause().getMessage());
-                    }
-                });
-    }*/
-
-   /* void handleDeleteConnectors(RoutingContext routingContext) {
-        LOGGER.trace("handleDeleteConnectors () started");
-        HttpServerResponse response = routingContext.response();
-        MultiMap params = getQueryParams(routingContext, response).get();
-        String connectorId = params.get(ID);
-        JsonObject authInfo = (JsonObject) routingContext.data().get("authInfo");
-        JsonObject request = new JsonObject();
-        request.put(CONNECTOR_ID, connectorId);
-        request.put(USER_ID, authInfo.getString(USER_ID));
-        brokerService.deleteConnector(
-                request,
-                deleteHandler -> {
-                    if (deleteHandler.succeeded()) {
-                        LOGGER.info("success: [handleDeleteConnectors] " + deleteHandler);
-                        handleSuccessResponse(
-                                response, ResponseType.Ok.getCode(), deleteHandler.result().toString());
-                        routingContext.data().put(RESPONSE_SIZE, response.bytesWritten());
-                        Future.future(fu -> updateAuditTable(routingContext));
-                    } else {
-                        LOGGER.error("Error: Connector/Queue deletion failed");
-                        processBackendResponse(response, deleteHandler.cause().getMessage());
-                    }
-                });
-    }*/
 
     private void handleEntitiesQuery(RoutingContext routingContext) {
         JsonObject authInfo = (JsonObject) routingContext.data().get("authInfo");

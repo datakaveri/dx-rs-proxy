@@ -6,24 +6,16 @@ import io.vertx.core.json.JsonObject;
 public class DeleteConnectorResponse {
   private String type;
   private String title;
-  private String userName;
-  private String connectorName;
+  private String details;
 
-  // Default Constructor
-  public DeleteConnectorResponse() {}
-
-  // Constructor with all fields
-  public DeleteConnectorResponse(String type, String title, String userName, String connectorName) {
+  public DeleteConnectorResponse(String type, String title, String connectorId) {
     this.type = type;
     this.title = title;
-    this.userName = userName;
-    this.connectorName = connectorName;
+    this.details = "Connector/queue deleted Successfully [" + connectorId + "]";
   }
 
-  // Convert to JsonObject
   public JsonObject toJson() {
-    JsonObject result =
-        new JsonObject().put("userName", this.userName).put("connectorName", this.connectorName);
+    JsonObject result = new JsonObject().put("details", this.details);
 
     return new JsonObject()
         .put("type", this.type)
@@ -31,7 +23,6 @@ public class DeleteConnectorResponse {
         .put("results", new JsonArray().add(result));
   }
 
-  // Getters and Setters
   public String getType() {
     return type;
   }
@@ -48,19 +39,7 @@ public class DeleteConnectorResponse {
     this.title = title;
   }
 
-  public String getUserName() {
-    return userName;
-  }
-
-  public void setUserName(String userName) {
-    this.userName = userName;
-  }
-
-  public String getConnectorName() {
-    return connectorName;
-  }
-
-  public void setConnectorName(String connectorName) {
-    this.connectorName = connectorName;
+  public String getDetails() {
+    return details;
   }
 }

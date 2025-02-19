@@ -145,11 +145,11 @@ public class ConnectorServiceImpl implements ConnectorService {
               LOGGER.info("User permissions updated successfully for User: {}", userid);
 
               // Build Success Response
-              DeleteConnectorResponse response = new DeleteConnectorResponse();
-              response.setType(ResponseUrn.SUCCESS_URN.getUrn());
-              response.setTitle(ResponseUrn.SUCCESS_URN.getMessage());
-              response.setUserName(resultContainer.getUserId());
-              response.setConnectorName(resultContainer.getConnectorId());
+              DeleteConnectorResponse response =
+                  new DeleteConnectorResponse(
+                      ResponseUrn.SUCCESS_URN.getUrn(),
+                      ResponseUrn.SUCCESS_URN.getMessage(),
+                      resultContainer.getConnectorId());
               return response;
             })
         .recover(
