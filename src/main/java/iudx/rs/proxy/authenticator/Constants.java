@@ -13,7 +13,8 @@ public class Constants {
           "/async/search",
           "/async/status",
           "/overview",
-          "/summary");
+          "/summary",
+          "/user/resetPassword");
   public static final String LEE_WAY = "jwtLeeWay";
   public static final String AUTH_CERTIFICATE_PATH = "/cert";
   public static final String JSON_USERID = "userid";

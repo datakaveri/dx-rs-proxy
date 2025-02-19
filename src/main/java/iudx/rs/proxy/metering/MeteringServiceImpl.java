@@ -2,7 +2,6 @@ package iudx.rs.proxy.metering;
 
 import static iudx.rs.proxy.apiserver.util.ApiServerConstants.*;
 import static iudx.rs.proxy.apiserver.util.ApiServerConstants.TABLE_NAME;
-import static iudx.rs.proxy.common.Constants.DATABROKER_SERVICE_ADDRESS;
 import static iudx.rs.proxy.common.Constants.DB_SERVICE_ADDRESS;
 import static iudx.rs.proxy.metering.util.Constants.*;
 import static iudx.rs.proxy.metering.util.Constants.IID;
@@ -20,7 +19,7 @@ import iudx.rs.proxy.cache.cacheImpl.CacheType;
 import iudx.rs.proxy.common.Api;
 import iudx.rs.proxy.common.Response;
 import iudx.rs.proxy.database.DatabaseService;
-import iudx.rs.proxy.databroker.DatabrokerService;
+import iudx.rs.proxy.databroker.DatabrokerServiceOld;
 import iudx.rs.proxy.metering.util.DateValidation;
 import iudx.rs.proxy.metering.util.ParamsValidation;
 import iudx.rs.proxy.metering.util.QueryBuilder;
@@ -36,7 +35,7 @@ import org.apache.logging.log4j.Logger;
 public class MeteringServiceImpl implements MeteringService {
 
   private static final Logger LOGGER = LogManager.getLogger(MeteringServiceImpl.class);
-  public static DatabrokerService rmqService;
+  public static DatabrokerServiceOld rmqService;
   public static DatabaseService postgresService;
   private final QueryBuilder queryBuilder = new QueryBuilder();
   private final ObjectMapper objectMapper = new ObjectMapper();
@@ -89,7 +88,7 @@ public class MeteringServiceImpl implements MeteringService {
 
     this.poolOptions = new PoolOptions().setMaxSize(databasePoolSize);
     this.pool = PgPool.pool(vertxInstance, connectOptions, poolOptions);
-    this.rmqService = DatabrokerService.createProxy(vertxInstance, DATABROKER_SERVICE_ADDRESS);
+   // this.rmqService = DatabrokerService.createProxy(vertxInstance, DATABROKER_SERVICE_ADDRESS);
     if (postgresService == null) {
       postgresService = DatabaseService.createProxy(vertxInstance, DB_SERVICE_ADDRESS);
     }

@@ -1,13 +1,13 @@
 package iudx.rs.proxy.databroker;
 
-import io.vertx.codegen.annotations.Fluent;
 import io.vertx.codegen.annotations.GenIgnore;
 import io.vertx.codegen.annotations.ProxyGen;
 import io.vertx.codegen.annotations.VertxGen;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import iudx.rs.proxy.databroker.model.*;
+import iudx.rs.proxy.databroker.util.Vhosts;
 
 @ProxyGen
 @VertxGen
@@ -18,27 +18,19 @@ public interface DatabrokerService {
     return new DatabrokerServiceVertxEBProxy(vertx, address);
   }
 
-  @Fluent
-  DatabrokerService executeAdapterQuery(
-      JsonObject request, Handler<AsyncResult<JsonObject>> handler);
+  Future<QueueResponse> createQueue(QueueRequest queueRequest);
 
-  @Fluent
-  DatabrokerService executeAdapterQueryRPC(
-      JsonObject request, Handler<AsyncResult<JsonObject>> handler);
+  Future<String> deleteQueue(String queueName, Vhosts vhostType);
 
-  @Fluent
-  DatabrokerService publishMessage(
-      JsonObject body,
-      String toExchange,
-      String routingKey,
-      Handler<AsyncResult<JsonObject>> handler);
+  Future<QueueResponse> bindQueue(QueueRequest request);
 
-  @Fluent
-  DatabrokerService createConnector(JsonObject request, Handler<AsyncResult<JsonObject>> handler);
+  Future<UserResponse> createUserIfNotExist(String userid, Vhosts vhostType);
 
-  @Fluent
-  DatabrokerService deleteConnector(JsonObject request, Handler<AsyncResult<JsonObject>> handler);
+  Future<RabbitMQPermission> updateUserPermissions(UserPermissionRequest permissionRequest);
 
-  @Fluent
-  DatabrokerService resetPassword(String userid, Handler<AsyncResult<JsonObject>> handler);
+  Future<JsonObject> resetPasswordInRmq(String userid, String password);
+
+  //  Future<Void> publishMessage(JsonObject request, String toExchange, String routingKey);
+
+  Future<JsonObject> executeAdapterQueryRPC(JsonObject request);
 }

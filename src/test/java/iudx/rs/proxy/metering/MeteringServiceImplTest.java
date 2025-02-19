@@ -24,19 +24,17 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.rabbitmq.RabbitMQClient;
-import iudx.rs.proxy.apiserver.util.ApiServerConstants;
 import iudx.rs.proxy.cache.CacheService;
 import iudx.rs.proxy.cache.cacheImpl.CacheType;
 import iudx.rs.proxy.common.Api;
 import iudx.rs.proxy.configuration.Configuration;
 import iudx.rs.proxy.database.DatabaseService;
-import iudx.rs.proxy.databroker.DatabrokerService;
+import iudx.rs.proxy.databroker.DatabrokerServiceOld;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
-import iudx.rs.proxy.metering.util.Constants;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.junit.jupiter.api.BeforeAll;
@@ -466,7 +464,7 @@ class MeteringServiceImplTest {
     request.put(PROVIDER_ID, "dummy");
     DatabaseService postgresService = mock(DatabaseService.class);
     AsyncResult<JsonObject> asyncResult = mock(AsyncResult.class);
-    MeteringServiceImpl.rmqService = mock(DatabrokerService.class);
+    MeteringServiceImpl.rmqService = mock(DatabrokerServiceOld.class);
 
     when(asyncResult.succeeded()).thenReturn(true);
     doAnswer(

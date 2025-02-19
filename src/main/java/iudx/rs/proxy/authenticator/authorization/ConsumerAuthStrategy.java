@@ -62,8 +62,10 @@ public class ConsumerAuthStrategy implements AuthorizationStrategy {
 
   @Override
   public boolean isAuthorized(AuthorizationRequest authRequest, JwtData jwtData) {
+    LOGGER.error("authRequest:: " + authRequest.getApi());
     JsonArray access = jwtData.getCons() != null ? jwtData.getCons().getJsonArray("access") : null;
     boolean result = false;
+    LOGGER.debug("access:: " + access);
     if (access == null) {
       return result;
     }
@@ -78,7 +80,11 @@ public class ConsumerAuthStrategy implements AuthorizationStrategy {
     if (!result) {
       result = consumerAuthorizationRules.get(IudxAccess.ASYNC.getAccess()).contains(authRequest);
     }
-    LOGGER.debug("result : " + result);
+    if (!result) {
+      result =
+          consumerAuthorizationRules.get(IudxAccess.MANAGEMENT.getAccess()).contains(authRequest);
+    }
+    LOGGER.debug("result --------------: " + consumerAuthorizationRules.get(IudxAccess.MANAGEMENT.getAccess()));
     return result;
   }
 }

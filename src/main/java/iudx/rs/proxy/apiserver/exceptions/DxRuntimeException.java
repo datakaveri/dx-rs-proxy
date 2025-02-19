@@ -1,8 +1,9 @@
 package iudx.rs.proxy.apiserver.exceptions;
 
+import io.vertx.core.json.JsonObject;
 import iudx.rs.proxy.common.ResponseUrn;
 
-public  class DxRuntimeException extends RuntimeException {
+public class DxRuntimeException extends RuntimeException {
 
   private static final long serialVersionUID = 1L;
 
@@ -22,6 +23,16 @@ public  class DxRuntimeException extends RuntimeException {
     this.statusCode = statusCode;
     this.urn = urn;
     this.message = message;
+  }
+
+  public DxRuntimeException(String message) {
+    super(message);
+    JsonObject json = new JsonObject(message);
+    String urnTitle = json.getString("title");
+
+    this.statusCode = json.getInteger("type");
+    this.urn = ResponseUrn.fromCode(urnTitle);
+    this.message = json.getString("detail", urn.getMessage());
   }
 
   public DxRuntimeException(final int statusCode, final ResponseUrn urn, final Throwable cause) {

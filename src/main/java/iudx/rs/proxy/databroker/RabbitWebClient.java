@@ -18,8 +18,8 @@ public class RabbitWebClient {
   private static final Logger LOGGER = LogManager.getLogger(RabbitWebClient.class);
 
   static WebClient webClient;
-  private String username;
-  private String password;
+  private final String username;
+  private final String password;
 
   RabbitWebClient(Vertx vertx, WebClientOptions webClientOptions, JsonObject propJson) {
     this.username = propJson.getString("userName");
@@ -45,6 +45,7 @@ public class RabbitWebClient {
             HttpResponse<Buffer> response = ar.result();
             promise.complete(response);
           } else {
+            LOGGER.error("Request failed: " + ar.cause().getStackTrace());
             promise.fail(ar.cause());
           }
         });
@@ -54,7 +55,6 @@ public class RabbitWebClient {
   public Future<HttpResponse<Buffer>> requestAsync(String requestType, String url) {
     LOGGER.trace("Info : RabbitMQClientImpl#requestAsync() started");
     Promise<HttpResponse<Buffer>> promise = Promise.promise();
-    LOGGER.debug("url:{} ; requestType: {}", url, requestType);
     HttpRequest<Buffer> webRequest = createRequest(requestType, url);
 
     webRequest.send(
@@ -72,9 +72,9 @@ public class RabbitWebClient {
 
   private HttpRequest<Buffer> createRequest(String requestType, String url) {
     HttpRequest<Buffer> webRequest = null;
+    LOGGER.debug("requestType : {}; url : {}", requestType, url);
     switch (requestType) {
       case REQUEST_GET:
-        LOGGER.debug("requestType : {}; url : {}", requestType, url);
         webRequest = webClient.get(url).basicAuthentication(username, password);
 
         break;
