@@ -7,7 +7,7 @@ import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.serviceproxy.ServiceBinder;
 import iudx.rs.proxy.cache.CacheService;
-import iudx.rs.proxy.metering.MeteringService;
+import iudx.rs.proxy.databroker.service.DatabrokerService;
 import iudx.rs.proxy.optional.consentlogs.dss.PayloadSigningManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -16,7 +16,7 @@ public class ConsentLoggingVerticle extends AbstractVerticle {
   private static final Logger LOGGER = LogManager.getLogger(ConsentLoggingVerticle.class);
   PayloadSigningManager payloadSigningManager;
   ConsentLoggingService consentLoggingService;
-  MeteringService meteringService;
+  DatabrokerService databrokerService;
   CacheService cacheService;
   private ServiceBinder binder;
   private MessageConsumer<JsonObject> consumer;
@@ -29,11 +29,11 @@ public class ConsentLoggingVerticle extends AbstractVerticle {
     password = config().getString("password");
     binder = new ServiceBinder(vertx);
 
-    meteringService = MeteringService.createProxy(vertx, METERING_SERVICE_ADDRESS);
+    databrokerService = DatabrokerService.createProxy(vertx, DATABROKER_SERVICE_ADDRESS);
     cacheService = CacheService.createProxy(vertx, CACHE_SERVICE_ADDRESS);
     payloadSigningManager = PayloadSigningManager.init(config());
     consentLoggingService =
-        new ConsentLoggingServiceImpl(vertx, payloadSigningManager, meteringService, cacheService);
+        new ConsentLoggingServiceImpl(vertx, payloadSigningManager, databrokerService, cacheService);
     consumer =
         binder
             .setAddress(CONSEENTLOG_SERVICE_ADDRESS)

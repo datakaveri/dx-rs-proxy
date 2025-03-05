@@ -1,6 +1,6 @@
-package iudx.rs.proxy.metering.util;
+package iudx.rs.proxy.apiserver.auditing.util;
 
-import static iudx.rs.proxy.metering.util.Constants.*;
+import static iudx.rs.proxy.apiserver.auditing.util.Constants.*;
 
 import io.vertx.core.json.JsonObject;
 import iudx.rs.proxy.common.Api;
@@ -19,7 +19,11 @@ public class ParamsValidation {
   }
 
   public JsonObject paramsCheck(JsonObject request) {
-
+    if (request.getString(ENDPOINT).equals("/ngsi-ld/v1/provider/audit")
+            && request.getString(PROVIDER_ID) == null) {
+      //LOGGER.debug("Info: " + INVALID_PROVIDER_REQUIRED);
+      return new JsonObject().put(ERROR, "INVALID_PROVIDER_REQUIRED");
+    }
     if (request.getString(TIME_RELATION) == null
         || !(request.getString(TIME_RELATION).equals(DURING)
             || request.getString(TIME_RELATION).equals(BETWEEN))) {

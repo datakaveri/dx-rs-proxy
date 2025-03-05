@@ -1,24 +1,24 @@
-package iudx.rs.proxy.metering.util;
+package iudx.rs.proxy.apiserver.auditing.util;
 
-import static iudx.rs.proxy.apiserver.util.ApiServerConstants.ENDT;
-import static iudx.rs.proxy.apiserver.util.ApiServerConstants.STARTT;
-import static iudx.rs.proxy.metering.util.Constants.*;
+import static iudx.rs.proxy.apiserver.auditing.util.Constants.*;
 
 import io.vertx.core.json.JsonObject;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
+
+import iudx.rs.proxy.apiserver.util.ApiServerConstants;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class DateValidation {
   private static final Logger LOGGER = LogManager.getLogger(DateValidation.class);
 
-  public JsonObject dateParamCheck(JsonObject request) {
+  public static JsonObject dateParamCheck(JsonObject request) {
 
     // since + is treated as space in uri
-    String startTime = request.getString(STARTT).trim().replaceAll("\\s", "+");
-    String endTime = request.getString(ENDT).trim().replaceAll("\\s", "+");
+    String startTime = request.getString(ApiServerConstants.START_TIME).trim().replaceAll("\\s", "+");
+    String endTime = request.getString(ApiServerConstants.END_TIME).trim().replaceAll("\\s", "+");
 
     ZonedDateTime zdt;
     try {
@@ -45,16 +45,16 @@ public class DateValidation {
       LOGGER.error(INVALID_DATE_DIFFERENCE);
       return new JsonObject().put(ERROR, INVALID_DATE_DIFFERENCE);
     }
-    request.put(STARTT, startTime);
-    request.put(ENDT, endTime);
+    request.put(ApiServerConstants.START_TIME, startTime);
+    request.put(ApiServerConstants.END_TIME, endTime);
     return request;
   }
 
-  private long zonedDateTimeDayDifference(ZonedDateTime startTime, ZonedDateTime endTime) {
+  private static long  zonedDateTimeDayDifference(ZonedDateTime startTime, ZonedDateTime endTime) {
     return ChronoUnit.DAYS.between(startTime, endTime);
   }
 
-  private long zonedDateTimeMinuteDifference(ZonedDateTime startTime, ZonedDateTime endTime) {
+  private static long zonedDateTimeMinuteDifference(ZonedDateTime startTime, ZonedDateTime endTime) {
     return ChronoUnit.MINUTES.between(startTime, endTime);
   }
 }

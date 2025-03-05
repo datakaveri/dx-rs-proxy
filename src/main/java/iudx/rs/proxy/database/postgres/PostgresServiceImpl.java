@@ -1,8 +1,7 @@
 package iudx.rs.proxy.database.postgres;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.pgclient.PgPool;
@@ -27,9 +26,9 @@ public class PostgresServiceImpl implements DatabaseService {
   }
 
   @Override
-  public DatabaseService executeQuery(
-      final JsonObject jsonObject, Handler<AsyncResult<JsonObject>> handler) {
+  public Future<JsonObject> executeQuery(final JsonObject jsonObject) {
     LOGGER.info("In execute query");
+    Promise<JsonObject> promise = Promise.promise();
     Collector<Row, ?, List<JsonObject>> rowCollector =
         Collectors.mapping(Row::toJson, Collectors.toList());
     String query = jsonObject.getString("query");
@@ -47,12 +46,11 @@ public class PostgresServiceImpl implements DatabaseService {
                       .put("type", ResponseUrn.SUCCESS_URN.getUrn())
                       .put("title", ResponseUrn.SUCCESS_URN.getMessage())
                       .put("result", result);
-              handler.handle(Future.succeededFuture(responseJson));
+              promise.complete(responseJson);
             })
         .onFailure(
             failureHandler -> {
               LOGGER.info("In postgres failed");
-
               LOGGER.debug(failureHandler);
               Response response =
                   new Response.Builder()
@@ -60,8 +58,8 @@ public class PostgresServiceImpl implements DatabaseService {
                       .withStatus(HttpStatus.SC_BAD_REQUEST)
                       .withDetail(failureHandler.getLocalizedMessage())
                       .build();
-              handler.handle(Future.failedFuture(response.toString()));
+              promise.fail(response.toString());
             });
-    return this;
+    return promise.future();
   }
 }

@@ -1,7 +1,7 @@
 package iudx.rs.proxy.optional.consentlogs;
 
 import static iudx.rs.proxy.apiserver.util.ApiServerConstants.VALIDATION_ID_PATTERN;
-import static iudx.rs.proxy.metering.util.Constants.ORIGIN;
+import static iudx.rs.proxy.apiserver.auditing.util.Constants.ORIGIN;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -13,7 +13,7 @@ import iudx.rs.proxy.authenticator.model.JwtData;
 import iudx.rs.proxy.cache.CacheService;
 import iudx.rs.proxy.cache.cacheImpl.CacheType;
 import iudx.rs.proxy.common.ConsentLogType;
-import iudx.rs.proxy.metering.MeteringService;
+import iudx.rs.proxy.databroker.service.DatabrokerService;
 import iudx.rs.proxy.optional.consentlogs.dss.PayloadSigningManager;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -27,7 +27,7 @@ public class ConsentLoggingServiceImpl implements ConsentLoggingService {
   private static final Logger LOGGER = LogManager.getLogger(ConsentLoggingServiceImpl.class);
   static WebClient catWebClient;
   private final PayloadSigningManager payloadSigningManager;
-  private final MeteringService meteringService;
+  private final DatabrokerService databrokerService;
   private final CacheService cacheService;
   Supplier<String> isoTimeSupplier =
       () -> ZonedDateTime.now(ZoneId.of(ZoneId.SHORT_IDS.get("IST"))).toString();
@@ -36,10 +36,10 @@ public class ConsentLoggingServiceImpl implements ConsentLoggingService {
   public ConsentLoggingServiceImpl(
       Vertx vertx,
       PayloadSigningManager signingManager,
-      MeteringService meteringService,
+      DatabrokerService databrokerService,
       CacheService cacheService) {
     this.payloadSigningManager = signingManager;
-    this.meteringService = meteringService;
+    this.databrokerService = databrokerService;
     this.cacheService = cacheService;
     WebClientOptions options = new WebClientOptions();
     options.setTrustAll(true).setVerifyHost(false).setSsl(true);
@@ -133,7 +133,8 @@ public class ConsentLoggingServiceImpl implements ConsentLoggingService {
   private Future<Void> auditingConsentLog(JsonObject consentAuditLog) {
     LOGGER.trace("auditingConsentLog started");
     Promise<Void> promise = Promise.promise();
-    meteringService.publishMeteringData(
+    //todo: have to implement metering service for this
+   /* databrokerService.publishMessage(
         consentAuditLog,
         handler -> {
           if (handler.succeeded()) {
@@ -143,7 +144,7 @@ public class ConsentLoggingServiceImpl implements ConsentLoggingService {
             LOGGER.error("failed to publish log into RMQ.");
             promise.fail("failed to publish log into RMQ.");
           }
-        });
+        });*/
     return promise.future();
   }
 

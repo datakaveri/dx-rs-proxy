@@ -1,8 +1,9 @@
 package iudx.rs.proxy.apiserver.exceptions;
 
+import io.vertx.core.json.JsonObject;
 import iudx.rs.proxy.common.ResponseUrn;
 
-public  class DxRuntimeException extends RuntimeException {
+public class DxRuntimeException extends RuntimeException {
 
   private static final long serialVersionUID = 1L;
 

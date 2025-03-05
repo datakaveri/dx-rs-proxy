@@ -1,4 +1,4 @@
-package iudx.rs.proxy.metering.util;
+package iudx.rs.proxy.apiserver.auditing.util;
 
 public class Constants {
 

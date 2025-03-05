@@ -9,20 +9,23 @@ import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.rabbitmq.RabbitMQClient;
 import io.vertx.rabbitmq.RabbitMQOptions;
 import io.vertx.serviceproxy.ServiceBinder;
+import iudx.rs.proxy.databroker.service.DatabrokerService;
+import iudx.rs.proxy.databroker.service.DatabrokerServiceImpl;
+import iudx.rs.proxy.databroker.service.RabbitWebClient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class DatabrokerVerticle extends AbstractVerticle {
 
   private static final Logger LOGGER = LogManager.getLogger(DatabrokerVerticle.class);
-
+  DatabrokerService brokerService;
   private RabbitMQOptions config;
   private WebClientOptions webConfig;
-
   private String dataBrokerIp;
   private int dataBrokerPort;
   private int dataBrokerManagementPort;
   private String dataBrokerVhost;
+  private String dataBrokerIternalVhost;
   private String dataBrokerUserName;
   private String dataBrokerPassword;
   private int connectionTimeout;
@@ -30,17 +33,12 @@ public class DatabrokerVerticle extends AbstractVerticle {
   private int handshakeTimeout;
   private int requestedChannelMax;
   private int networkRecoveryInterval;
-  private RabbitClient rabbitClient;
   private RabbitWebClient rabbitWebClient;
-
   private String publishExchange;
   private String replyQueue;
-
   private RabbitMQClient rmqClient;
-
   private MessageConsumer<JsonObject> consumer;
   private ServiceBinder binder;
-  private DatabrokerService brokerService;
   private int brokerAmqpsPort;
 
   @Override
@@ -49,7 +47,8 @@ public class DatabrokerVerticle extends AbstractVerticle {
     dataBrokerIp = config().getString("dataBrokerIP");
     dataBrokerPort = config().getInteger("dataBrokerPort");
     dataBrokerManagementPort = config().getInteger("dataBrokerManagementPort");
-    dataBrokerVhost = config().getString("internalVhost");
+    dataBrokerIternalVhost = config().getString("internalVhost");
+    dataBrokerVhost = config().getString("prodVhost");
     dataBrokerUserName = config().getString("dataBrokerUserName");
     dataBrokerPassword = config().getString("dataBrokerPassword");
     connectionTimeout = config().getInteger("connectionTimeout");
@@ -68,7 +67,7 @@ public class DatabrokerVerticle extends AbstractVerticle {
     config.setPassword(dataBrokerPassword);
     config.setHost(dataBrokerIp);
     config.setPort(dataBrokerPort);
-    config.setVirtualHost(dataBrokerVhost);
+    config.setVirtualHost(dataBrokerIternalVhost);
     config.setConnectionTimeout(connectionTimeout);
     config.setRequestedHeartbeat(requestedHeartbeat);
     config.setHandshakeTimeout(handshakeTimeout);
@@ -78,7 +77,7 @@ public class DatabrokerVerticle extends AbstractVerticle {
 
     webConfig = new WebClientOptions();
     webConfig.setKeepAlive(true);
-    webConfig.setSsl(true);
+    webConfig.setSsl(false);
     webConfig.setConnectTimeout(86400000);
     webConfig.setDefaultHost(dataBrokerIp);
     webConfig.setDefaultPort(dataBrokerManagementPort);
@@ -91,27 +90,20 @@ public class DatabrokerVerticle extends AbstractVerticle {
     propObj.put("password", dataBrokerPassword);
     propObj.put("vHost", dataBrokerVhost);
 
-    rabbitWebClient = new RabbitWebClient(vertx, webConfig, propObj);
-
-    rabbitClient = new RabbitClient(vertx, config, rabbitWebClient, config());
-
     rmqClient = RabbitMQClient.create(vertx, config);
+
+    rabbitWebClient = new RabbitWebClient(vertx, webConfig, propObj);
 
     rmqClient
         .start()
         .onSuccess(
             rmqClientStarthandler -> {
               brokerService =
-                  new DatabrokerServiceImpl(
-                      vertx,
-                      rmqClient,
-                      rabbitClient,
-                      publishExchange,
-                      replyQueue,
-                      brokerAmqpsPort,
-                      dataBrokerIp,
-                      dataBrokerVhost);
+                  new DatabrokerServiceImpl(vertx, rmqClient, rabbitWebClient, config());
 
+              /*brokerService = new DatabrokerServiceImpl(vertx, rmqClient, rabbitWebClient, publishExchange,
+                                  brokerAmqpsPort, dataBrokerIp, dataBrokerIternalVhost, dataBrokerVhost);
+              */
               binder = new ServiceBinder(vertx);
               consumer =
                   binder

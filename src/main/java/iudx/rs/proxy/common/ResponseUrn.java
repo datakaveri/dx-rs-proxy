@@ -25,6 +25,7 @@ public enum ResponseUrn {
   RESOURCE_NOT_FOUND_URN("urn:dx:rs:resourceNotFound", "Document of given id does not exist"),
   QUEUE_NOT_FOUND_URN("urn:dx:rs:queueNotFound", "Queue does not exist"),
   ALREADY_EXIST_URN("urn:dx:rs:conflict", "Already exists"),
+  FORBIDDEN_URN("urn:dx:rs:forbidden", "Forbidden: Access denied"),
 
   LIMIT_EXCEED_URN(
       "urn:dx:rs:requestLimitExceeded", "Operation exceeds the degault value of limit"),
@@ -43,7 +44,9 @@ public enum ResponseUrn {
   BACKING_SERVICE_FORMAT_URN(
       "urn:dx:rs:backend", "format error from backing service [cat,auth etc.]"),
   SCHEMA_READ_ERROR_URN("urn:dx:rs:readError", "Fail to read file"),
-  YET_NOT_IMPLEMENTED_URN("urn:dx:rs:general", "urn yet not implemented in backend verticle.");
+  YET_NOT_IMPLEMENTED_URN("urn:dx:rs:general", "urn yet not implemented in backend verticle."),
+  INTERNAL_SERVER_ERROR_URN(
+      "urn:dx:rs:internalServerError", "Unexpected error during processing request");
 
   private final String urn;
   private final String message;

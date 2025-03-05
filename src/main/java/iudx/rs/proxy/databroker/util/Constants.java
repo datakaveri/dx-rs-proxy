@@ -11,7 +11,7 @@ public class Constants {
       "Something went wrong while creating user using mgmt API. Check credentials";
   public static final String CONFIGURE = "configure";
   public static final String CONSUMER = "consumer";
-  public static final String USER_ID = "userid";
+  public static final String USER_ID = "userId";
 
   public static final String DETAILS = "details";
   public static final String DENY = "";
@@ -55,7 +55,7 @@ public class Constants {
   public static final String TITLE = "title";
   public static final String RESULTS = "results";
 
-  public static final String USER_NAME = "username";
+  public static final String USER_NAME = "userName";
   public static final String USER_CREATION_ERROR = "User creation failed";
 
   public static final String URL = "URL";

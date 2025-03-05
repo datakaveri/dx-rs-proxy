@@ -29,6 +29,7 @@ pipeline {
     stage('Unit Tests and Code Coverage Test'){
       steps{
         script{
+          sh 'sudo update-alternatives --set java /usr/lib/jvm/java-21-openjdk-amd64/bin/java'
           sh 'cp /home/ubuntu/configs/rs-proxy-config-test.json ./secrets/all-verticles-configs/config-test.json'
           catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
               sh "mvn clean test checkstyle:checkstyle pmd:pmd"
@@ -61,6 +62,7 @@ pipeline {
         }
         cleanup{
           script{
+            sh 'sudo update-alternatives --set java /usr/lib/jvm/java-11-openjdk-amd64/bin/java'
             sh 'sudo rm -rf target/'
           }
         }        
@@ -70,6 +72,7 @@ pipeline {
     stage('Start RS-Proxy for Integration Testing'){
       steps{
         script{
+            sh 'sudo update-alternatives --set java /usr/lib/jvm/java-21-openjdk-amd64/bin/java'
             sh 'scp src/test/resources/ADEX-Resource-Proxy-Server-Consumer-APIs.postman_collection.json jenkins@jenkins-master:/var/lib/jenkins/iudx/rs-proxy/Newman/'
             sh 'docker compose -f docker-compose.test.yml up -d integTest'
             sh 'sleep 30'
@@ -110,6 +113,7 @@ pipeline {
         }
         cleanup{
           script{
+            sh 'sudo update-alternatives --set java /usr/lib/jvm/java-11-openjdk-amd64/bin/java'
             sh 'docker compose -f docker-compose.test.yml down --remove-orphans'
           } 
         }

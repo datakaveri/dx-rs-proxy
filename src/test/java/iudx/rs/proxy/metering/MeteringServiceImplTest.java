@@ -4,12 +4,11 @@ import static iudx.rs.proxy.apiserver.util.ApiServerConstants.*;
 import static iudx.rs.proxy.apiserver.util.ApiServerConstants.API;
 import static iudx.rs.proxy.authenticator.Constants.ROLE;
 import static iudx.rs.proxy.metering.MeteringServiceImpl.postgresService;
-import static iudx.rs.proxy.metering.util.Constants.*;
-import static iudx.rs.proxy.metering.util.Constants.ID;
-import static iudx.rs.proxy.metering.util.Constants.IID;
-import static iudx.rs.proxy.metering.util.Constants.PROVIDER_ID;
-import static iudx.rs.proxy.metering.util.Constants.RESPONSE_SIZE;
-import static iudx.rs.proxy.metering.util.Constants.USER_ID;
+import static iudx.rs.proxy.apiserver.auditing.util.Constants.ID;
+import static iudx.rs.proxy.apiserver.auditing.util.Constants.IID;
+import static iudx.rs.proxy.apiserver.auditing.util.Constants.PROVIDER_ID;
+import static iudx.rs.proxy.apiserver.auditing.util.Constants.RESPONSE_SIZE;
+import static iudx.rs.proxy.apiserver.auditing.util.Constants.USER_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.*;
@@ -30,13 +29,12 @@ import iudx.rs.proxy.cache.cacheImpl.CacheType;
 import iudx.rs.proxy.common.Api;
 import iudx.rs.proxy.configuration.Configuration;
 import iudx.rs.proxy.database.DatabaseService;
-import iudx.rs.proxy.databroker.DatabrokerService;
+import iudx.rs.proxy.databroker.DatabrokerServiceOld;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
-import iudx.rs.proxy.metering.util.Constants;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.junit.jupiter.api.BeforeAll;
@@ -466,7 +464,7 @@ class MeteringServiceImplTest {
     request.put(PROVIDER_ID, "dummy");
     DatabaseService postgresService = mock(DatabaseService.class);
     AsyncResult<JsonObject> asyncResult = mock(AsyncResult.class);
-    MeteringServiceImpl.rmqService = mock(DatabrokerService.class);
+    MeteringServiceImpl.rmqService = mock(DatabrokerServiceOld.class);
 
     when(asyncResult.succeeded()).thenReturn(true);
     doAnswer(
@@ -639,8 +637,8 @@ class MeteringServiceImplTest {
     AsyncResult<JsonObject> asyncResult = mock(AsyncResult.class);
     postgresService = mock(DatabaseService.class);
     JsonObject json = new JsonObject().put("role", "admin");
-    json.put(STARTT, "2022-11-20T00:00:00Z");
-    json.put(ENDT, "2022-12-20T00:00:00Z");
+    json.put(ApiServerConstants.START_TIME, "2022-11-20T00:00:00Z");
+    json.put(ApiServerConstants.END_TIME, "2022-12-20T00:00:00Z");
     JsonObject expected = new JsonObject().put(SUCCESS, "count return");
 
     when(asyncResult.succeeded()).thenReturn(true);
@@ -675,8 +673,8 @@ class MeteringServiceImplTest {
     JsonObject json = new JsonObject().put("role", "Consumer");
     json.put(IID, "15c7506f-c800-48d6-adeb-0542b03947c6/integration-test-alias/");
     json.put(USER_ID, "15c7506f-c800-48d6-adeb-0542b03947c6");
-    json.put(STARTT, "2022-11-20T00:00:00Z");
-    json.put(ENDT, "2022-12-20T00:00:00Z");
+    json.put(ApiServerConstants.START_TIME, "2022-11-20T00:00:00Z");
+    json.put(ApiServerConstants.END_TIME, "2022-12-20T00:00:00Z");
     JsonObject expected = new JsonObject().put(SUCCESS, "count return");
     JsonObject providerJson =
         new JsonObject()
@@ -716,8 +714,8 @@ class MeteringServiceImplTest {
     JsonObject json = new JsonObject().put("role", "Provider");
     json.put(IID, "15c7506f-c800-48d6-adeb-0542b03947c6/integration-test-alias/");
     json.put(USER_ID, "15c7506f-c800-48d6-adeb-0542b03947c6");
-    json.put(STARTT, "2022-11-20T00:00:00Z");
-    json.put(ENDT, "2022-12-20T00:00:00Z");
+    json.put(ApiServerConstants.START_TIME, "2022-11-20T00:00:00Z");
+    json.put(ApiServerConstants.END_TIME, "2022-12-20T00:00:00Z");
     JsonObject expected = new JsonObject().put(SUCCESS, "count return");
     JsonObject providerJson =
         new JsonObject()
@@ -820,8 +818,8 @@ class MeteringServiceImplTest {
     JsonObject json = new JsonObject().put("role", "consumer");
     json.put(IID, "15c7506f-c800-48d6-adeb-0542b03947c6/integration-test-alias/");
     json.put(USER_ID, "15c7506f-c800-48d6-adeb-0542b03947c6");
-    json.put(STARTT, "2022-11-20T00:00:00Z");
-    json.put(ENDT, "2022-12-20T00:00:00Z");
+    json.put(ApiServerConstants.START_TIME, "2022-11-20T00:00:00Z");
+    json.put(ApiServerConstants.END_TIME, "2022-12-20T00:00:00Z");
 
     JsonObject jsonObject =
         new JsonObject().put("resourceid", "5b7556b5-0779-4c47-9cf2-3f209779aa22").put("count", 5);
@@ -933,7 +931,7 @@ class MeteringServiceImplTest {
     JsonObject json = new JsonObject().put("role", "consumer");
     json.put(IID, "15c7506f-c800-48d6-adeb-0542b03947c6/integration-test-alias/");
     json.put(USER_ID, "15c7506f-c800-48d6-adeb-0542b03947c6");
-    json.put(STARTT, "2022-11-20T00:00:00Z");
+    json.put(ApiServerConstants.START_TIME, "2022-11-20T00:00:00Z");
 
     lenient().when(future.succeeded()).thenReturn(false);
     JsonObject providerJson =
@@ -964,7 +962,7 @@ class MeteringServiceImplTest {
     JsonObject json = new JsonObject().put("role", "admin");
     json.put(IID, "15c7506f-c800-48d6-adeb-0542b03947c6/integration-test-alias/");
     json.put(USER_ID, "15c7506f-c800-48d6-adeb-0542b03947c6");
-    json.put(STARTT, "2022-11-20T00:00:00Z");
+    json.put(ApiServerConstants.START_TIME, "2022-11-20T00:00:00Z");
     meteringService.monthlyOverview(
         json,
         handler -> {
@@ -1068,8 +1066,8 @@ class MeteringServiceImplTest {
     JsonObject json = new JsonObject().put("role", "admin");
     json.put(IID, "15c7506f-c800-48d6-adeb-0542b03947c6/integration-test-alias/");
     json.put(USER_ID, "15c7506f-c800-48d6-adeb-0542b03947c6");
-    json.put(STARTT, "2022-11-20T00:00:00Z");
-    json.put(ENDT, "2022-12-20T00:00:00Z");
+    json.put(ApiServerConstants.START_TIME, "2022-11-20T00:00:00Z");
+    json.put(ApiServerConstants.END_TIME, "2022-12-20T00:00:00Z");
 
     JsonObject jsonObject =
         new JsonObject().put("resourceid", "5b7556b5-0779-4c47-9cf2-3f209779aa22").put("count", 5);
@@ -1148,8 +1146,8 @@ class MeteringServiceImplTest {
     JsonObject json1 = new JsonObject().put("role", "admin");
     json.put(IID, "15c7506f-c800-48d6-adeb-0542b03947c6/integration-test-alias/");
     json.put(USER_ID, "15c7506f-c800-48d6-adeb-0542b03947c6");
-    json.put(STARTT, "2022-11-20T00:00:00Z");
-    json.put(ENDT, "2022-12-20T00:00:00Z");
+    json.put(ApiServerConstants.START_TIME, "2022-11-20T00:00:00Z");
+    json.put(ApiServerConstants.END_TIME, "2022-12-20T00:00:00Z");
 
     meteringService.summaryOverview(
         json1,
@@ -1175,8 +1173,8 @@ class MeteringServiceImplTest {
     JsonObject json1 = new JsonObject().put("role", "admin");
     json1.put(IID, "15c7506f-c800-48d6-adeb-0542b03947c6/integration-test-alias/");
     json1.put(USER_ID, "15c7506f-c800-48d6-adeb-0542b03947c6");
-    json1.put(STARTT, "2022-11-20T");
-    json1.put(ENDT, "2022-12-20T00:00:00Z");
+    json1.put(ApiServerConstants.START_TIME, "2022-11-20T");
+    json1.put(ApiServerConstants.END_TIME, "2022-12-20T00:00:00Z");
 
     meteringService.summaryOverview(
         json1,
@@ -1203,8 +1201,8 @@ class MeteringServiceImplTest {
     JsonObject json1 = new JsonObject().put("role", "admin");
     json1.put(IID, "15c7506f-c800-48d6-adeb-0542b03947c6/integration-test-alias/");
     json1.put(USER_ID, "15c7506f-c800-48d6-adeb-0542b03947c6");
-    json1.put(STARTT, "2022-11-20T");
-    json1.put(ENDT, "2022-12-20T00:00:00Z");
+    json1.put(ApiServerConstants.START_TIME, "2022-11-20T");
+    json1.put(ApiServerConstants.END_TIME, "2022-12-20T00:00:00Z");
 
     meteringService.monthlyOverview(
         json1,
@@ -1229,8 +1227,8 @@ class MeteringServiceImplTest {
             .put("resourceid", "5b7556b5-0779-4c47-9cf2-3f209779aa22");
     json.put(IID, "15c7506f-c800-48d6-adeb-0542b03947c6");
     json.put(USER_ID, "15c7506f-c800-48d6-adeb-0542b03947c6");
-    json.put(STARTT, "2022-11-20T00:00:00Z");
-    json.put(ENDT, "2022-12-20T00:00:00Z");
+    json.put(ApiServerConstants.START_TIME, "2022-11-20T00:00:00Z");
+    json.put(ApiServerConstants.END_TIME, "2022-12-20T00:00:00Z");
 
     JsonObject jsonObject =
         new JsonObject().put("resourceid", "5b7556b5-0779-4c47-9cf2-3f209779aa22").put("count", 1);

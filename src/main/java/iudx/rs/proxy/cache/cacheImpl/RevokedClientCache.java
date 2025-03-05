@@ -56,25 +56,26 @@ public class RevokedClientCache implements IudxCache {
     String query = Constants.SELECT_REVOKE_TOKEN_SQL;
     JsonObject jsonQuery = new JsonObject().put("query", query);
 
-    pgService.executeQuery(
-        jsonQuery,
-        handler -> {
-          if (handler.succeeded()) {
-            JsonArray clientIdArray = handler.result().getJsonArray("result");
-            cache.invalidateAll();
-            clientIdArray.forEach(
-                e -> {
-                  JsonObject clientInfo = (JsonObject) e;
-                  String key = clientInfo.getString("_id");
-                  String expiry = clientInfo.getString("expiry");
-                  CacheValue<JsonObject> cacheValue = createCacheValue(key, expiry);
-                  this.cache.put(key, cacheValue);
-                });
-            promise.complete();
-          } else {
-            promise.fail("failed to refresh");
-          }
-        });
+    pgService
+        .executeQuery(jsonQuery)
+        .onSuccess(
+            pgResult -> {
+              JsonArray clientIdArray = pgResult.getJsonArray("result");
+              cache.invalidateAll();
+              clientIdArray.forEach(
+                  e -> {
+                    JsonObject clientInfo = (JsonObject) e;
+                    String key = clientInfo.getString("_id");
+                    String expiry = clientInfo.getString("expiry");
+                    CacheValue<JsonObject> cacheValue = createCacheValue(key, expiry);
+                    this.cache.put(key, cacheValue);
+                  });
+              promise.complete();
+            })
+        .onFailure(
+            failure -> {
+              promise.fail("failed to refresh");
+            });
     return promise.future();
   }
 

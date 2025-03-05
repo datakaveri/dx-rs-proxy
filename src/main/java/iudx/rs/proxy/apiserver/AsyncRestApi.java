@@ -9,7 +9,7 @@ import static iudx.rs.proxy.common.Constants.*;
 import static iudx.rs.proxy.common.HttpStatusCode.BAD_REQUEST;
 import static iudx.rs.proxy.common.ResponseUrn.BACKING_SERVICE_FORMAT_URN;
 import static iudx.rs.proxy.common.ResponseUrn.INVALID_PARAM_URN;
-import static iudx.rs.proxy.metering.util.Constants.ERROR;
+import static iudx.rs.proxy.apiserver.auditing.util.Constants.ERROR;
 
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.QueryStringDecoder;
@@ -35,9 +35,8 @@ import iudx.rs.proxy.common.Api;
 import iudx.rs.proxy.common.HttpStatusCode;
 import iudx.rs.proxy.common.ResponseUrn;
 import iudx.rs.proxy.database.DatabaseService;
-import iudx.rs.proxy.databroker.DatabrokerService;
-import iudx.rs.proxy.metering.MeteringService;
-import iudx.rs.proxy.metering.util.ResponseBuilder;
+import iudx.rs.proxy.databroker.service.DatabrokerService;
+import iudx.rs.proxy.apiserver.auditing.util.ResponseBuilder;
 import iudx.rs.proxy.optional.consentlogs.ConsentLoggingService;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -54,7 +53,6 @@ public class AsyncRestApi {
   private final Router router;
   private final DatabrokerService databrokerService;
   private final DatabaseService databaseService;
-  private final MeteringService meteringService;
   private final ConsentLoggingService consentLoggingService;
   private final ParamsValidator validator;
   boolean isTimeLimitEnabled;
@@ -67,7 +65,6 @@ public class AsyncRestApi {
     this.router = router;
     this.databrokerService = DatabrokerService.createProxy(vertx, DATABROKER_SERVICE_ADDRESS);
     this.databaseService = DatabaseService.createProxy(vertx, DB_SERVICE_ADDRESS);
-    this.meteringService = MeteringService.createProxy(vertx, METERING_SERVICE_ADDRESS);
     this.consentLoggingService =
         ConsentLoggingService.createProxy(vertx, CONSEENTLOG_SERVICE_ADDRESS);
     this.cacheService = CacheService.createProxy(vertx, CACHE_SERVICE_ADDRESS);
@@ -225,42 +222,13 @@ public class AsyncRestApi {
     String searchId = request.getParam("searchId");
     StringBuilder query = new StringBuilder(SELECT_ASYNC_DETAILS.replace("$0", searchId));
     JsonObject queryJson = new JsonObject().put("query", query);
-    databaseService.executeQuery(
-        queryJson,
-        dbHandler -> {
-          if (dbHandler.succeeded()) {
-            JsonArray dbResult = dbHandler.result().getJsonArray("result");
-            if (dbResult.isEmpty() || dbResult.hasNull(0)) {
-              ResponseBuilder responseBuilder =
-                  new ResponseBuilder("failed")
-                      .setTypeAndTitle(400, ResponseUrn.BAD_REQUEST_URN.getUrn())
-                      .setMessage("Invalid searchId");
-              processBackendResponse(response, responseBuilder.getResponse().toString());
-              return;
-            }
-            JsonObject result = dbResult.getJsonObject(0);
-            if (result.getString("consumer_id").equalsIgnoreCase(sub)) {
-              JsonObject requestJson = new JsonObject();
-              requestJson.put("searchId", searchId);
-              requestJson.put("routingKey", result.getString("resource_id"));
-              adapterResponseForSearchQuery(routingContext, requestJson, response, false);
-            } else {
-              ResponseBuilder responseBuilder =
-                  new ResponseBuilder("failed")
-                      .setTypeAndTitle(400, ResponseUrn.BAD_REQUEST_URN.getUrn())
-                      .setMessage(
-                          "Please use same user token to check status as "
-                              + "used while calling search API");
-              processBackendResponse(response, responseBuilder.getResponse().toString());
-            }
-          } else {
-            ResponseBuilder responseBuilder =
-                new ResponseBuilder("failed")
-                    .setTypeAndTitle(400, ResponseUrn.BAD_REQUEST_URN.getUrn())
-                    .setMessage("invalid searchId/serachId not present in db");
-            processBackendResponse(response, responseBuilder.getResponse().toString());
-          }
-        });
+    /* postgresService
+    .executeQuery(queryJson)
+    .onSuccess(promise::complete)
+    .onFailure(
+            failure -> {
+                promise.fail(failure.getMessage());
+            });*/
   }
 
   private Optional<MultiMap> getQueryParams(
@@ -324,94 +292,97 @@ public class AsyncRestApi {
       json.put("ppbNumber", extractPPBNo(authInfo)); // this is exclusive for ADeX deployment.
     }
     LOGGER.debug("publishing into rmq : " + json);
-    databrokerService.executeAdapterQueryRPC(
-        json,
-        handler -> {
-          if (handler.succeeded()) {
-            JsonObject adapterResponse = handler.result();
-            int status =
-                adapterResponse.containsKey("statusCode")
-                    ? adapterResponse.getInteger("statusCode")
-                    : 400;
-            response.putHeader(CONTENT_TYPE, APPLICATION_JSON);
-            response.setStatusCode(status);
-            if (status == 201 && isDbOprationRequired) {
-              LOGGER.info("Success: adapter call Success with {}", status);
-              String resourceId = json.getJsonArray("id").getString(0);
-              StringBuilder insertQuery =
-                  new StringBuilder(
-                      ISERT_ASYNC_REQUEST_DETAIL_SQL
-                          .replace("$0", adapterResponse.getString("searchId"))
-                          .replace("$1", authInfo.getString(USER_ID))
-                          .replace("$2", resourceId)
-                          .replace("$3", json.toString()));
+    databrokerService
+        .executeAdapterQueryRPC(json)
+        .onSuccess(
+            adapterResponse -> {
+              int status =
+                  adapterResponse.containsKey("statusCode")
+                      ? adapterResponse.getInteger("statusCode")
+                      : 400;
+              response.putHeader(CONTENT_TYPE, APPLICATION_JSON);
+              response.setStatusCode(status);
+              if (status == 201 && isDbOprationRequired) {
+                LOGGER.info("Success: adapter call Success with {}", status);
+                String resourceId = json.getJsonArray("id").getString(0);
+                StringBuilder insertQuery =
+                    new StringBuilder(
+                        ISERT_ASYNC_REQUEST_DETAIL_SQL
+                            .replace("$0", adapterResponse.getString("searchId"))
+                            .replace("$1", authInfo.getString(USER_ID))
+                            .replace("$2", resourceId)
+                            .replace("$3", json.toString()));
 
-              JsonObject queryJson = new JsonObject().put("query", insertQuery);
-              databaseService.executeQuery(
-                  queryJson,
-                  dbHandler -> {
-                    if (dbHandler.succeeded()) {
-                      JsonObject resultJson = dbHandler.result();
-                      if (resultJson
-                          .getString(JSON_TYPE)
-                          .equalsIgnoreCase(ResponseUrn.SUCCESS_URN.getUrn())) {
-                        adapterResponse.put(JSON_TYPE, ResponseUrn.SUCCESS_URN.getUrn());
-                        adapterResponse.put(JSON_TITLE, "query submitted successfully");
-                        JsonObject userResponse = new JsonObject();
-                        userResponse.put(JSON_TYPE, ResponseUrn.SUCCESS_URN.getUrn());
-                        userResponse.put(JSON_TITLE, "query submitted successfully");
-                        userResponse.put(
-                            "results",
-                            new JsonArray()
-                                .add(
-                                    new JsonObject()
-                                        .put("searchId", adapterResponse.getString("searchId"))));
-                        response.end(userResponse.toString());
-                        context.data().put(RESPONSE_SIZE, response.bytesWritten());
-                      }
-                    } else {
-                      LOGGER.error("Failed to insert into db ");
-                      ResponseBuilder responseBuilder =
-                          new ResponseBuilder("failed")
-                              .setTypeAndTitle(
-                                  ResponseType.InternalError.getCode(),
-                                  ResponseType.InternalError.getMessage())
-                              .setMessage("Fail to generate searchID");
-                      processBackendResponse(response, responseBuilder.getResponse().toString());
-                    }
-                  });
-            } else if (status == 200 && !isDbOprationRequired) {
-              LOGGER.info("Success: adapter call Success with {}", status);
-              JsonObject userResponse = new JsonObject();
-              userResponse.put(JSON_TYPE, ResponseUrn.SUCCESS_URN.getUrn());
-              userResponse.put(JSON_TITLE, "Success");
-              String userId = authInfo.getString(USER_ID);
-              // Extract the "results" section from adapter response
-              JsonArray results = adapterResponse.getJsonArray("results");
-              JsonObject resultsObject = results.getJsonObject(0);
-              // Add user_id field after searchId in each object within the results array
-              resultsObject.put("userId", userId);
-              userResponse.put("results", results);
-              response.end(userResponse.toString());
-              context.data().put(RESPONSE_SIZE, response.bytesWritten());
-              Future.future(fu -> updateAuditTable(context));
+                JsonObject queryJson = new JsonObject().put("query", insertQuery);
+                databaseService
+                    .executeQuery(queryJson)
+                    .onSuccess(
+                        pgHandler -> {
+                          if (pgHandler
+                              .getString(JSON_TYPE)
+                              .equalsIgnoreCase(ResponseUrn.SUCCESS_URN.getUrn())) {
+                            adapterResponse.put(JSON_TYPE, ResponseUrn.SUCCESS_URN.getUrn());
+                            adapterResponse.put(JSON_TITLE, "query submitted successfully");
+                            JsonObject userResponse = new JsonObject();
+                            userResponse.put(JSON_TYPE, ResponseUrn.SUCCESS_URN.getUrn());
+                            userResponse.put(JSON_TITLE, "query submitted successfully");
+                            userResponse.put(
+                                "results",
+                                new JsonArray()
+                                    .add(
+                                        new JsonObject()
+                                            .put(
+                                                "searchId",
+                                                adapterResponse.getString("searchId"))));
+                            response.end(userResponse.toString());
+                            context.data().put(RESPONSE_SIZE, response.bytesWritten());
+                          }
+                        })
+                    .onFailure(
+                        failure -> {
+                          LOGGER.error("Failed to insert into db ");
+                          ResponseBuilder responseBuilder =
+                              new ResponseBuilder("failed")
+                                  .setTypeAndTitle(
+                                      ResponseType.InternalError.getCode(),
+                                      ResponseType.InternalError.getMessage())
+                                  .setMessage("Fail to generate searchID");
+                          processBackendResponse(
+                              response, responseBuilder.getResponse().toString());
+                        });
 
-            } else {
-              LOGGER.info("Success: adapter call success with {}", status);
-              HttpStatusCode responseUrn = HttpStatusCode.getByValue(status);
-              String adapterFailureMessage = adapterResponse.getString("details");
-              JsonObject responseJson = generateResponse(responseUrn, adapterFailureMessage);
-              response.end(responseJson.toString());
-            }
+              } else if (status == 200 && !isDbOprationRequired) {
+                LOGGER.info("Success: adapter call Success with {}", status);
+                JsonObject userResponse = new JsonObject();
+                userResponse.put(JSON_TYPE, ResponseUrn.SUCCESS_URN.getUrn());
+                userResponse.put(JSON_TITLE, "Success");
+                String userId = authInfo.getString(USER_ID);
+                // Extract the "results" section from adapter response
+                JsonArray results = adapterResponse.getJsonArray("results");
+                JsonObject resultsObject = results.getJsonObject(0);
+                // Add user_id field after searchId in each object within the results array
+                resultsObject.put("userId", userId);
+                userResponse.put("results", results);
+                response.end(userResponse.toString());
+                context.data().put(RESPONSE_SIZE, response.bytesWritten());
+                Future.future(fu -> updateAuditTable(context));
 
-          } else {
-            LOGGER.error("Failure: Adapter Search Fail");
-            response
-                .putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                .setStatusCode(400)
-                .end(handler.cause().getMessage());
-          }
-        });
+              } else {
+                LOGGER.info("Success: adapter call success with {}", status);
+                HttpStatusCode responseUrn = HttpStatusCode.getByValue(status);
+                String adapterFailureMessage = adapterResponse.getString("details");
+                JsonObject responseJson = generateResponse(responseUrn, adapterFailureMessage);
+                response.end(responseJson.toString());
+              }
+            })
+        .onFailure(
+            failure -> {
+              LOGGER.error("Failure: Adapter Search Fail");
+              response
+                  .putHeader(CONTENT_TYPE, APPLICATION_JSON)
+                  .setStatusCode(400)
+                  .end(failure.getMessage());
+            });
   }
 
   public String extractPPBNo(JsonObject authInfo) {
@@ -508,7 +479,10 @@ public class AsyncRestApi {
                 request.put(RESPONSE_SIZE, context.data().get(RESPONSE_SIZE));
                 request.put(PROVIDER_ID, providerId);
 
-                meteringService.publishMeteringData(
+                //todo: have to implement metering service for this
+
+
+                /*meteringService.publishMeteringData(
                     request,
                     handler -> {
                       if (handler.succeeded()) {
@@ -518,7 +492,7 @@ public class AsyncRestApi {
                         LOGGER.error("failed to publish message in RMQ.");
                         promise.fail(handler.cause().getMessage());
                       }
-                    });
+                    });*/
               } else {
                 LOGGER.error("info failed [auditing]: " + cacheItemHandler.cause().getMessage());
                 promise.fail("info failed: [] " + cacheItemHandler.cause().getMessage());
