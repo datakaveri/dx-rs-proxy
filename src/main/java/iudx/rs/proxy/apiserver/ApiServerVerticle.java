@@ -7,8 +7,8 @@ import static iudx.rs.proxy.authenticator.Constants.*;
 import static iudx.rs.proxy.common.Constants.*;
 import static iudx.rs.proxy.common.HttpStatusCode.*;
 import static iudx.rs.proxy.common.ResponseUrn.*;
-import static iudx.rs.proxy.metering.util.Constants.DETAIL;
-import static iudx.rs.proxy.metering.util.Constants.ERROR;
+import static iudx.rs.proxy.apiserver.auditing.util.Constants.DETAIL;
+import static iudx.rs.proxy.apiserver.auditing.util.Constants.ERROR;
 
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.QueryStringDecoder;
@@ -34,17 +34,15 @@ import iudx.rs.proxy.apiserver.exceptions.DxRuntimeException;
 import iudx.rs.proxy.apiserver.handlers.*;
 import iudx.rs.proxy.apiserver.query.NGSILDQueryParams;
 import iudx.rs.proxy.apiserver.query.QueryMapper;
-import iudx.rs.proxy.apiserver.response.ResponseType;
-import iudx.rs.proxy.apiserver.util.ApiServerConstants;
 import iudx.rs.proxy.apiserver.util.RequestType;
+import iudx.rs.proxy.apiserver.auditing.controller.AuditLogController;
 import iudx.rs.proxy.cache.CacheService;
 import iudx.rs.proxy.cache.cacheImpl.CacheType;
 import iudx.rs.proxy.common.Api;
 import iudx.rs.proxy.common.HttpStatusCode;
 import iudx.rs.proxy.common.ResponseUrn;
 import iudx.rs.proxy.database.DatabaseService;
-import iudx.rs.proxy.databroker.DatabrokerService;
-import iudx.rs.proxy.metering.MeteringService;
+import iudx.rs.proxy.databroker.service.DatabrokerService;
 import iudx.rs.proxy.optional.consentlogs.ConsentLoggingService;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -67,7 +65,6 @@ public class ApiServerVerticle extends AbstractVerticle {
     // private boolean isSSL, isProduction;
     private ParamsValidator validator;
     private DatabaseService databaseService;
-    private MeteringService meteringService;
     private DatabrokerService brokerService;
     private String dxCatalogueBasePath;
     private String dxAuthBasePath;
@@ -79,7 +76,6 @@ public class ApiServerVerticle extends AbstractVerticle {
     @Override
     public void start() throws Exception {
         databaseService = DatabaseService.createProxy(vertx, DB_SERVICE_ADDRESS);
-        meteringService = MeteringService.createProxy(vertx, METERING_SERVICE_ADDRESS);
         brokerService = DatabrokerService.createProxy(vertx, DATABROKER_SERVICE_ADDRESS);
         consentLoggingService = ConsentLoggingService.createProxy(vertx, CONSEENTLOG_SERVICE_ADDRESS);
         cacheService = CacheService.createProxy(vertx, CACHE_SERVICE_ADDRESS);
@@ -121,19 +117,7 @@ public class ApiServerVerticle extends AbstractVerticle {
                 .handler(this::handleTemporalQuery)
                 .failureHandler(validationsFailureHandler);
 
-        router
-                .get(apis.getConsumerAuditEndpoint())
-                .handler(TokenDecodeHandler.create(vertx))
-                .handler(AuthHandler.create(vertx, apis, isAdexInstance))
-                .handler(this::getConsumerAuditDetail);
-
-        router
-                .get(apis.getProviderAuditEndpoint())
-                .handler(TokenDecodeHandler.create(vertx))
-                .handler(AuthHandler.create(vertx, apis, isAdexInstance))
-                .handler(this::getProviderAuditDetail);
-
-        // Post Queries
+    // Post Queries
         ValidationHandler postEntitiesValidationHandler =
                 new ValidationHandler(vertx, RequestType.POST_ENTITIES);
         router
@@ -159,24 +143,11 @@ public class ApiServerVerticle extends AbstractVerticle {
                 .handler(this::contextBodyCall)
                 .handler(this::handlePostEntitiesQuery)
                 .failureHandler(validationsFailureHandler);
-
-        router
-                .get(apis.getOverviewEndPoint())
-                .handler(TokenDecodeHandler.create(vertx))
-                .handler(AuthHandler.create(vertx, apis, isAdexInstance))
-                .handler(this::getMonthlyOverview)
-                .failureHandler(validationsFailureHandler);
-
-        // Metering Summary
-        router
-                .get(apis.getSummaryEndPoint())
-                .handler(TokenDecodeHandler.create(vertx))
-                .handler(AuthHandler.create(vertx, apis, isAdexInstance))
-                .handler(this::getAllSummaryHandler)
-                .failureHandler(validationsFailureHandler);
+;
 
 
         new ConnectorController(router, apis, vertx, isAdexInstance, dxApiBasePath).setRouter();
+        new AuditLogController(router,apis,validationsFailureHandler,vertx,isAdexInstance).setRouter();
 
         
         /* Static Resource Handler */
@@ -639,97 +610,6 @@ public class ApiServerVerticle extends AbstractVerticle {
         }
     }
 
-    private Future<Void> getConsumerAuditDetail(RoutingContext routingContext) {
-        LOGGER.debug("Info: getConsumerAuditDetail Started. ");
-        JsonObject entries = new JsonObject();
-        JsonObject consumer = (JsonObject) routingContext.data().get("authInfo");
-        HttpServerRequest request = routingContext.request();
-
-        entries.put("userid", consumer.getString("userid"));
-        entries.put("endPoint", consumer.getString("apiEndpoint"));
-        entries.put("startTime", request.getParam("time"));
-        entries.put("endTime", request.getParam("endTime"));
-        entries.put("timeRelation", request.getParam("timerel"));
-        entries.put("options", request.headers().get("options"));
-        entries.put("resourceId", request.getParam("id"));
-        entries.put("api", request.getParam("api"));
-        entries.put(OFFSETPARAM, request.getParam(OFFSETPARAM));
-        entries.put(LIMITPARAM, request.getParam(LIMITPARAM));
-        Promise<Void> promise = Promise.promise();
-        LOGGER.debug(entries);
-        HttpServerResponse response = routingContext.response();
-        meteringService.executeReadQuery(
-                entries,
-                handler -> {
-                    if (handler.succeeded()) {
-                        LOGGER.debug("Table Reading Done.");
-                        JsonObject jsonObject = (JsonObject) handler.result();
-                        String checkType = jsonObject.getString("type");
-                        if (checkType.equalsIgnoreCase("204")) {
-                            handleSuccessResponse(
-                                    response, ResponseType.NoContent.getCode(), handler.result().toString());
-                        } else {
-                            handleSuccessResponse(
-                                    response, ResponseType.Ok.getCode(), handler.result().toString());
-                        }
-                        promise.complete();
-                    } else {
-                        LOGGER.error("Fail msg " + handler.cause().getMessage());
-                        LOGGER.error("Table reading failed.");
-                        processBackendResponse(response, handler.cause().getMessage());
-                        promise.complete();
-                    }
-                });
-        return promise.future();
-    }
-
-    private Future<Void> getProviderAuditDetail(RoutingContext routingContext) {
-        LOGGER.trace("Info: getProviderAuditDetail Started.");
-        JsonObject entries = new JsonObject();
-        JsonObject provider = (JsonObject) routingContext.data().get("authInfo");
-        HttpServerRequest request = routingContext.request();
-
-        entries.put("endPoint", provider.getString("apiEndpoint"));
-        entries.put("userid", provider.getString("userid"));
-        entries.put("iid", provider.getString("iid"));
-        entries.put("startTime", request.getParam("time"));
-        entries.put("endTime", request.getParam("endTime"));
-        entries.put("timeRelation", request.getParam("timerel"));
-        entries.put("providerID", request.getParam("providerID"));
-        entries.put("consumerID", request.getParam("consumer"));
-        entries.put("resourceId", request.getParam("id"));
-        entries.put("api", request.getParam("api"));
-        entries.put("options", request.headers().get("options"));
-        entries.put(OFFSETPARAM, request.getParam(OFFSETPARAM));
-        entries.put(LIMITPARAM, request.getParam(LIMITPARAM));
-        Promise<Void> promise = Promise.promise();
-        LOGGER.debug(entries);
-        HttpServerResponse response = routingContext.response();
-        meteringService.executeReadQuery(
-                entries,
-                handler -> {
-                    if (handler.succeeded()) {
-                        LOGGER.debug("Table Reading Done.");
-                        JsonObject jsonObject = (JsonObject) handler.result();
-                        String checkType = jsonObject.getString("type");
-                        if (checkType.equalsIgnoreCase("204")) {
-                            handleSuccessResponse(
-                                    response, ResponseType.NoContent.getCode(), handler.result().toString());
-                        } else {
-                            handleSuccessResponse(
-                                    response, ResponseType.Ok.getCode(), handler.result().toString());
-                        }
-                        promise.complete();
-                    } else {
-                        LOGGER.error("Fail msg " + handler.cause().getMessage());
-                        LOGGER.error("Table reading failed.");
-                        processBackendResponse(response, handler.cause().getMessage());
-                        promise.complete();
-                    }
-                });
-        return promise.future();
-    }
-
     private void handlePostEntitiesQuery(RoutingContext routingContext) {
         LOGGER.trace("Info: handlePostEntitiesQuery method started.");
         HttpServerRequest request = routingContext.request();
@@ -784,85 +664,6 @@ public class ApiServerVerticle extends AbstractVerticle {
                 });
     }
 
-    private void getMonthlyOverview(RoutingContext routingContext) {
-        HttpServerRequest request = routingContext.request();
-        LOGGER.trace("Info: getMonthlyOverview Started.");
-        JsonObject authInfo = (JsonObject) routingContext.data().get("authInfo");
-        authInfo.put(STARTT, request.getParam(STARTT));
-        authInfo.put(ENDT, request.getParam(ENDT));
-        HttpServerResponse response = routingContext.response();
-
-        String iid = authInfo.getString("iid");
-        String role = authInfo.getString("role");
-
-        if (!VALIDATION_ID_PATTERN.matcher(iid).matches()
-                && (role.equalsIgnoreCase("provider") || role.equalsIgnoreCase("delegate"))) {
-            JsonObject jsonResponse =
-                    generateResponse(UNAUTHORIZED, UNAUTHORIZED_RESOURCE_URN, "Not Authorized");
-            response
-                    .putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .setStatusCode(401)
-                    .end(jsonResponse.toString());
-            return;
-        }
-
-        meteringService.monthlyOverview(
-                authInfo,
-                handler -> {
-                    if (handler.succeeded()) {
-                        LOGGER.debug("Successful");
-                        handleSuccessResponse(response, ResponseType.Ok.getCode(), handler.result().toString());
-                    } else {
-                        LOGGER.error("Fail: Bad request");
-                        processBackendResponse(response, handler.cause().getMessage());
-                    }
-                });
-    }
-
-    private void getAllSummaryHandler(RoutingContext routingContext) {
-        LOGGER.trace("Info: getAllSummary Started.");
-        HttpServerRequest request = routingContext.request();
-        JsonObject authInfo = (JsonObject) routingContext.data().get("authInfo");
-        authInfo.put(STARTT, request.getParam(STARTT));
-        authInfo.put(ENDT, request.getParam(ENDT));
-        LOGGER.debug("auth info = " + authInfo);
-        HttpServerResponse response = routingContext.response();
-
-        String iid = authInfo.getString("iid");
-        String role = authInfo.getString("role");
-
-        if (!VALIDATION_ID_PATTERN.matcher(iid).matches()
-                && (role.equalsIgnoreCase("provider") || role.equalsIgnoreCase("delegate"))) {
-            JsonObject jsonResponse =
-                    generateResponse(UNAUTHORIZED, UNAUTHORIZED_RESOURCE_URN, "Not Authorized");
-            response
-                    .putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .setStatusCode(401)
-                    .end(jsonResponse.toString());
-            return;
-        }
-
-        meteringService.summaryOverview(
-                authInfo,
-                handler -> {
-                    if (handler.succeeded()) {
-                        JsonObject jsonObject = handler.result();
-                        String checkType = jsonObject.getString("type");
-                        if (checkType.equalsIgnoreCase("204")) {
-                            handleSuccessResponse(
-                                    response, ResponseType.NoContent.getCode(), handler.result().toString());
-                        } else {
-                            LOGGER.debug("Successful");
-                            handleSuccessResponse(
-                                    response, ResponseType.Ok.getCode(), handler.result().toString());
-                        }
-                    } else {
-                        LOGGER.error("Fail: Bad request");
-                        processBackendResponse(response, handler.cause().getMessage());
-                    }
-                });
-    }
-
     private void updateAuditTable(RoutingContext context) {
         Promise<Void> promise = Promise.promise();
         JsonObject authInfo = (JsonObject) context.data().get("authInfo");
@@ -904,7 +705,9 @@ public class ApiServerVerticle extends AbstractVerticle {
                                 request.put(RESPONSE_SIZE, context.data().get(RESPONSE_SIZE));
                                 request.put(PROVIDER_ID, providerId);
 
-                                meteringService.publishMeteringData(
+                                //todo: have to implement metering service for this
+
+                               /* meteringService.publishMeteringData(
                                         request,
                                         handler -> {
                                             if (handler.succeeded()) {
@@ -914,7 +717,7 @@ public class ApiServerVerticle extends AbstractVerticle {
                                                 LOGGER.error("failed to publish message in RMQ.");
                                                 promise.fail(handler.cause().getMessage());
                                             }
-                                        });
+                                        });*/
                             } else {
                                 LOGGER.error("info failed [auditing]: " + cacheItemHandler.cause().getMessage());
                                 promise.fail("info failed: [] " + cacheItemHandler.cause().getMessage());

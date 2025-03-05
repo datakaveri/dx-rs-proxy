@@ -66,8 +66,8 @@ public class ApiServerConstants {
   public static final String SUMMARY_ENDPOINT = "/summary";
   public static final String CONNECTORS = "/connector";
   public static final String RESET_PWD = "/user/resetPassword";
-  public static final String STARTT = "starttime";
-  public static final String ENDT = "endtime";
+  public static final String START_TIME = "startTime";
+  public static final String END_TIME = "endTime";
 
   public static final String API_ENDPOINT = "apiEndpoint";
   public static final String API_METHOD = "method";

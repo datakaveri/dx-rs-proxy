@@ -10,8 +10,10 @@ import static iudx.rs.proxy.apiserver.util.ApiServerConstants.MSG_BAD_QUERY;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.serviceproxy.ServiceException;
 import iudx.rs.proxy.apiserver.exceptions.DxRuntimeException;
 import iudx.rs.proxy.apiserver.response.RestResponse;
+import iudx.rs.proxy.common.DXServiceExceptionCode;
 import iudx.rs.proxy.common.HttpStatusCode;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
@@ -25,8 +27,7 @@ public class FailureHandler implements Handler<RoutingContext> {
   public void handle(RoutingContext context) {
     Throwable failure = context.failure();
 
-    if (failure instanceof DxRuntimeException) {
-      DxRuntimeException exception = (DxRuntimeException) failure;
+    if (failure instanceof DxRuntimeException exception) {
       LOGGER.error(exception.getUrn().getUrn() + " : " + exception.getMessage());
       HttpStatusCode code = HttpStatusCode.getByValue(exception.getStatusCode());
 
@@ -43,17 +44,36 @@ public class FailureHandler implements Handler<RoutingContext> {
           .putHeader(CONTENT_TYPE, APPLICATION_JSON)
           .setStatusCode(exception.getStatusCode())
           .end(response.toString());
-    }
+    } else if (failure instanceof ServiceException exception) {
 
-    if (failure instanceof RuntimeException) {
+      DXServiceExceptionCode code = DXServiceExceptionCode.getByValue(exception.failureCode());
 
-      String validationErrorMessage = MSG_BAD_QUERY;
+      JsonObject response =
+          new RestResponse.Builder()
+              .withType(code.getUrn())
+              .withTitle(code.getDescription())
+              .withMessage(exception.getMessage())
+              .build()
+              .toJson();
+
+      LOGGER.error("response: " + response);
+
+      context
+          .response()
+          .putHeader(CONTENT_TYPE, APPLICATION_JSON)
+          .setStatusCode(code.getStatusCode())
+          .end(response.encode());
+    } else if (failure instanceof RuntimeException) {
+
       context
           .response()
           .putHeader(CONTENT_TYPE, APPLICATION_JSON)
           .setStatusCode(HttpStatus.SC_BAD_REQUEST)
-          .end(validationFailureResponse(validationErrorMessage).toString());
+          .end(validationFailureResponse(MSG_BAD_QUERY).toString());
+    } else {
+      LOGGER.error("failue in FailureHandldr " + failure);
     }
+
     context.next();
   }
 

@@ -1,6 +1,5 @@
-package iudx.rs.proxy.databroker;
+package iudx.rs.proxy.databroker.service;
 
-import static iudx.rs.proxy.apiserver.util.ApiServerConstants.FAILED;
 import static iudx.rs.proxy.databroker.util.Constants.*;
 import static iudx.rs.proxy.databroker.util.Util.*;
 
@@ -11,13 +10,10 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.rabbitmq.QueueOptions;
 import io.vertx.rabbitmq.RabbitMQClient;
 import io.vertx.rabbitmq.RabbitMQOptions;
-import iudx.rs.proxy.common.HttpStatusCode;
-import iudx.rs.proxy.common.Response;
-import iudx.rs.proxy.common.ResponseUrn;
+import io.vertx.serviceproxy.ServiceException;
 import iudx.rs.proxy.databroker.model.*;
 import iudx.rs.proxy.databroker.util.PermissionOpType;
 import iudx.rs.proxy.databroker.util.Vhosts;
-import iudx.rs.proxy.metering.util.ResponseBuilder;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -103,12 +99,9 @@ public class DatabrokerServiceImpl implements DatabrokerService {
                   } else if (status == HttpStatus.SC_NO_CONTENT) {
                     // Queue already exists
                     LOGGER.warn("Queue already exists: {}", queueName);
-                    promise.fail(
-                        getResponseJson(
-                                HttpStatus.SC_CONFLICT,
-                                HttpStatusCode.CONFLICT.getUrn(),
-                                QUEUE_ALREADY_EXISTS)
-                            .toString());
+                    // Wrapping the custom exception in a ServiceException with a status code (e.g.,
+                    // 400) and a message
+                    promise.fail(new ServiceException(3, "All ready exist"));
                   } else if (status == HttpStatus.SC_BAD_REQUEST) {
                     // Conflicting properties
                     LOGGER.error(
@@ -117,9 +110,7 @@ public class DatabrokerServiceImpl implements DatabrokerService {
                         queueName);
 
                     promise.fail(
-                        getResponseJson(
-                                status, FAILURE, QUEUE_ALREADY_EXISTS_WITH_DIFFERENT_PROPERTIES)
-                            .toString());
+                        new ServiceException(1, QUEUE_ALREADY_EXISTS_WITH_DIFFERENT_PROPERTIES));
                   }
                 } else {
                   // Request failed
@@ -129,17 +120,13 @@ public class DatabrokerServiceImpl implements DatabrokerService {
                       ar.cause().getMessage());
 
                   promise.fail(
-                      getResponseJson(400, FAILURE, QUEUE_ALREADY_EXISTS_WITH_DIFFERENT_PROPERTIES)
-                          .toString());
+                      new ServiceException(0, "Unexpected error during processing request"));
                 }
               });
     } else {
       // Invalid Request
       LOGGER.error("Invalid request: Request body is null or empty.");
-
-      promise.fail(
-          getResponseJson(400, ResponseUrn.INVALID_PARAM_URN.getUrn(), "Invalid request payload")
-              .toString());
+      promise.fail(new ServiceException(1, "Invalid request payload"));
     }
 
     return promise.future();
@@ -161,11 +148,7 @@ public class DatabrokerServiceImpl implements DatabrokerService {
     // Input Validation
     if ((queueName == null) || queueName.isEmpty()) {
       LOGGER.warn("Invalid request: queueName is null or empty");
-      ResponseBuilder responseBuilder =
-          new ResponseBuilder(FAILED)
-              .setTypeAndTitle(HttpStatus.SC_BAD_REQUEST, ResponseUrn.INVALID_PARAM_URN.getUrn())
-              .setMessage("Invalid request: queueName is null or empty");
-      promise.fail(responseBuilder.getResponse().toString());
+      promise.fail(new ServiceException(1, "Invalid request payload"));
     }
 
     String vhost = getVhost(vhostType);
@@ -195,19 +178,13 @@ public class DatabrokerServiceImpl implements DatabrokerService {
 
                 } else if (status == HttpStatus.SC_NOT_FOUND) {
                   // Queue Not Found
-                  ResponseBuilder responseBuilder =
-                      new ResponseBuilder(FAILED)
-                          .setTypeAndTitle(404, ResponseUrn.QUEUE_NOT_FOUND_URN.getUrn());
-                  promise.fail(responseBuilder.getResponse().toString());
+                  promise.fail(new ServiceException(2, "Not found"));
                 }
               } else {
                 // Request Failed
                 LOGGER.error(
                     "Failed to delete queue: {}. Cause: {}", queueName, ar.cause().getMessage());
-                ResponseBuilder responseBuilder =
-                    new ResponseBuilder(FAILED)
-                        .setTypeAndTitle(500, ResponseUrn.INTERNAL_SERVER_ERROR_URN.getMessage());
-                promise.fail(responseBuilder.getResponse().toString());
+                promise.fail(new ServiceException(0, "Unexpected error during processing request"));
               }
             });
 
@@ -263,37 +240,24 @@ public class DatabrokerServiceImpl implements DatabrokerService {
                     promise.complete(queueResponse);
                   } else if (status == HttpStatus.SC_NOT_FOUND) {
 
-                    ResponseBuilder responseBuilder =
-                        new ResponseBuilder(FAILED)
-                            .setTypeAndTitle(
-                                HttpStatus.SC_NOT_FOUND, ResponseUrn.QUEUE_NOT_FOUND_URN.getUrn())
-                            .setMessage(QUEUE_EXCHANGE_NOT_FOUND);
-                    promise.fail(responseBuilder.getResponse().toString());
+                    promise.fail(new ServiceException(2, QUEUE_EXCHANGE_NOT_FOUND));
 
                   } else if (status == HttpStatus.SC_UNAUTHORIZED) {
-                    ResponseBuilder responseBuilder =
-                        new ResponseBuilder(FAILED)
-                            .setTypeAndTitle(
-                                HttpStatus.SC_FORBIDDEN, ResponseUrn.FORBIDDEN_URN.getUrn())
-                            .setMessage("Unauthorized: user doesn't have sufficient permission");
-                    promise.fail(responseBuilder.getResponse().toString());
+
+                    promise.fail(
+                        new ServiceException(
+                            4, "Unauthorized: user doesn't have sufficient permission"));
                   }
                 } else {
                   LOGGER.error("Empty response from RabbitMQ {}", ar.cause().getLocalizedMessage());
-                  ResponseBuilder responseBuilder =
-                      new ResponseBuilder(FAILED)
-                          .setTypeAndTitle(
-                              HttpStatus.SC_INTERNAL_SERVER_ERROR,
-                              ResponseUrn.INTERNAL_SERVER_ERROR_URN.getUrn());
-                  promise.fail(responseBuilder.getResponse().toString());
+
+                  promise.fail(
+                      new ServiceException(0, "Unexpected error during processing request"));
                 }
               });
     } else {
-      ResponseBuilder responseBuilder =
-          new ResponseBuilder(FAILED)
-              .setTypeAndTitle(HttpStatus.SC_BAD_REQUEST, ResponseUrn.BAD_REQUEST_URN.getUrn())
-              .setMessage("Invalid request for binding : queueRequest or resourceId");
-      promise.fail(responseBuilder.getResponse().toString());
+      LOGGER.error("Invalid request for binding : queueRequest or resourceId is null or empty");
+      promise.fail(new ServiceException(1, "Invalid request payload"));
     }
 
     return promise.future();
@@ -343,7 +307,7 @@ public class DatabrokerServiceImpl implements DatabrokerService {
                                   "User creation failed for userid: {}. Cause: {}",
                                   userid,
                                   createUserHandler.cause().getMessage());
-                              promise.fail(createUserHandler.cause().getMessage());
+                              promise.fail(createUserHandler.cause());
                             }
                           });
                 }
@@ -365,19 +329,14 @@ public class DatabrokerServiceImpl implements DatabrokerService {
                   response.put(USER_ID, userid);
                   response.put(APIKEY, API_KEY_MESSAGE);
                   response.put(VHOST, vhost);
-                  LOGGER.debug("User exists response: {}", response);
+                  LOGGER.info("User exists");
                   promise.complete(new UserResponse(response));
                 } else {
                   /* Handle unexpected status */
                   LOGGER.warn(
                       "Unexpected status code while checking user existence: {}", statusCode);
-                  ResponseBuilder responseBuilder =
-                      new ResponseBuilder(FAILED)
-                          .setTypeAndTitle(
-                              HttpStatus.SC_INTERNAL_SERVER_ERROR,
-                              ResponseUrn.INTERNAL_SERVER_ERROR_URN.getUrn())
-                          .setMessage("Unexpected status while checking user existence");
-                  promise.fail(responseBuilder.getResponse().toString());
+                  promise.fail(
+                      new ServiceException(0, "Unexpected error during processing request"));
                 }
               } else {
                 // Request Failed
@@ -385,14 +344,7 @@ public class DatabrokerServiceImpl implements DatabrokerService {
                     "Failed to check user existence for userid: {}. Cause: {}",
                     userid,
                     reply.cause().getMessage());
-
-                ResponseBuilder responseBuilder =
-                    new ResponseBuilder(FAILED)
-                        .setTypeAndTitle(
-                            HttpStatus.SC_INTERNAL_SERVER_ERROR,
-                            ResponseUrn.INTERNAL_SERVER_ERROR_URN.getUrn())
-                        .setMessage("Failed to check user existence for userid: " + userid);
-                promise.fail(responseBuilder.getResponse().toString());
+                promise.fail(new ServiceException(0, "Unexpected error during processing request"));
               }
             });
 
@@ -445,16 +397,8 @@ public class DatabrokerServiceImpl implements DatabrokerService {
                       "Error: error in write permission set for user [ {} ] in vHost [ {} ]",
                       username,
                       vhost);
-
-                  // Create error response using ResponseBuilder
-                  ResponseBuilder responseBuilder =
-                      new ResponseBuilder(FAILED)
-                          .setTypeAndTitle(
-                              HttpStatus.SC_INTERNAL_SERVER_ERROR,
-                              ResponseUrn.INTERNAL_SERVER_ERROR_URN.getUrn())
-                          .setMessage("Unexpected error while setting write permission for user");
-
-                  promise.fail(responseBuilder.getResponse().toString());
+                  promise.fail(
+                      new ServiceException(0, "Unexpected error during processing request"));
                 }
               } else {
                 // Request failed: web client failure
@@ -463,16 +407,7 @@ public class DatabrokerServiceImpl implements DatabrokerService {
                     username,
                     vhost,
                     handler.cause().getMessage());
-
-                // Create error response using ResponseBuilder
-                ResponseBuilder responseBuilder =
-                    new ResponseBuilder(FAILED)
-                        .setTypeAndTitle(
-                            HttpStatus.SC_INTERNAL_SERVER_ERROR,
-                            ResponseUrn.INTERNAL_SERVER_ERROR_URN.getUrn())
-                        .setMessage("Failed to set write permission for user");
-
-                promise.fail(responseBuilder.getResponse().toString());
+                promise.fail(new ServiceException(0, "Unexpected error during processing request"));
               }
             });
 
@@ -504,26 +439,18 @@ public class DatabrokerServiceImpl implements DatabrokerService {
                   JsonObject permissionArray = new JsonObject(rmqResponse.body().toString());
                   promise.complete(permissionArray);
                 } else {
-                  LOGGER.error(handler.cause());
-                  LOGGER.error(handler.result());
-                  Response response =
-                      new Response.Builder()
-                          .withStatus(rmqResponse.statusCode())
-                          .withTitle(ResponseUrn.BAD_REQUEST_URN.getUrn())
-                          .withDetail("problem while getting user permissions")
-                          .withUrn(ResponseUrn.BAD_REQUEST_URN.getUrn())
-                          .build();
-                  promise.fail(response.toString());
+
+                  LOGGER.error(
+                      "Error: error in getting user permission for user [ {} ] cause [ {} ]",
+                      userId,
+                      handler.cause());
+
+                  promise.fail(new ServiceException(1, "problem while getting user permissions"));
                 }
               } else {
-                Response response =
-                    new Response.Builder()
-                        .withStatus(HttpStatus.SC_BAD_REQUEST)
-                        .withTitle(ResponseUrn.BAD_REQUEST_URN.getUrn())
-                        .withDetail(handler.cause().getLocalizedMessage())
-                        .withUrn(ResponseUrn.BAD_REQUEST_URN.getUrn())
-                        .build();
-                promise.fail(response.toString());
+
+                LOGGER.error("Error: error in getting user permission for user [ {} ]", userId);
+                promise.fail(new ServiceException(0, "Unexpected error during processing request"));
               }
             });
     return promise.future();
@@ -596,15 +523,9 @@ public class DatabrokerServiceImpl implements DatabrokerService {
                                   "Unexpected status code while updating permissions: {}",
                                   statusCode);
 
-                              // Create error response using ResponseBuilder
-                              ResponseBuilder responseBuilder =
-                                  new ResponseBuilder(FAILED)
-                                      .setTypeAndTitle(
-                                          statusCode, ResponseUrn.BAD_REQUEST_URN.getUrn())
-                                      .setMessage(
-                                          "Unexpected status code while updating permissions. Status Code = ");
-
-                              promise.fail(responseBuilder.getResponse().toString());
+                              promise.fail(
+                                  new ServiceException(
+                                      0, "Unexpected error during processing request"));
                             }
                           } else {
                             // Request Failed (WebClient request)
@@ -613,15 +534,9 @@ public class DatabrokerServiceImpl implements DatabrokerService {
                                 permissionRequest.getUserId(),
                                 updateHandler.cause().getMessage());
 
-                            // Create error response using ResponseBuilder
-                            ResponseBuilder responseBuilder =
-                                new ResponseBuilder(FAILED)
-                                    .setTypeAndTitle(
-                                        HttpStatus.SC_INTERNAL_SERVER_ERROR,
-                                        ResponseUrn.INTERNAL_SERVER_ERROR_URN.getUrn())
-                                    .setMessage("Failed to update permissions for user: ");
-
-                            promise.fail(responseBuilder.getResponse().toString());
+                            promise.fail(
+                                new ServiceException(
+                                    0, "Unexpected error during processing request"));
                           }
                         });
               } else {
@@ -630,16 +545,7 @@ public class DatabrokerServiceImpl implements DatabrokerService {
                     "Failed to get existing permissions for user: {}. Cause: {}",
                     permissionRequest.getUserId(),
                     permissionHandler.cause().getMessage());
-
-                // Create error response using ResponseBuilder
-                ResponseBuilder responseBuilder =
-                    new ResponseBuilder(FAILED)
-                        .setTypeAndTitle(
-                            HttpStatus.SC_INTERNAL_SERVER_ERROR,
-                            ResponseUrn.INTERNAL_SERVER_ERROR_URN.getUrn())
-                        .setMessage("Failed to get existing permissions for user: ");
-
-                promise.fail(responseBuilder.getResponse().toString());
+                promise.fail(new ServiceException(0, "Unexpected error during processing request"));
               }
             });
 
@@ -668,23 +574,12 @@ public class DatabrokerServiceImpl implements DatabrokerService {
                 } else {
                   LOGGER.error("Error :reset pwd method failed", ar.cause());
 
-                  ResponseBuilder responseBuilder =
-                      new ResponseBuilder(FAILED)
-                          .setTypeAndTitle(
-                              HttpStatus.SC_INTERNAL_SERVER_ERROR,
-                              ResponseUrn.INTERNAL_SERVER_ERROR_URN.getUrn());
-                  promise.fail(responseBuilder.getResponse().encode());
+                  promise.fail(
+                      new ServiceException(0, "Unexpected error during processing request"));
                 }
               } else {
                 LOGGER.error("User creation failed using mgmt API :", ar.cause());
-
-                ResponseBuilder responseBuilder =
-                    new ResponseBuilder(FAILED)
-                        .setTypeAndTitle(
-                            HttpStatus.SC_INTERNAL_SERVER_ERROR,
-                            ResponseUrn.INTERNAL_SERVER_ERROR_URN.getUrn())
-                        .setMessage(CHECK_CREDENTIALS);
-                promise.fail(responseBuilder.getResponse().encode());
+                promise.fail(new ServiceException(0, "Unexpected error during processing request"));
               }
             });
     return promise.future();
@@ -735,13 +630,9 @@ public class DatabrokerServiceImpl implements DatabrokerService {
                                   "Error: Failed to set vHost permissions. Cause: {}",
                                   handler.cause().getMessage());
 
-                              ResponseBuilder responseBuilder =
-                                  new ResponseBuilder(FAILED)
-                                      .setTypeAndTitle(
-                                          HttpStatus.SC_INTERNAL_SERVER_ERROR,
-                                          ResponseUrn.INTERNAL_SERVER_ERROR_URN.getUrn())
-                                      .setMessage("Error : error while setting vhostPermissions");
-                              promise.fail(responseBuilder.getResponse().toString());
+                              promise.fail(
+                                  new ServiceException(
+                                      0, "Unexpected error during processing request"));
                             }
                           });
                 } else {
@@ -750,25 +641,14 @@ public class DatabrokerServiceImpl implements DatabrokerService {
                       "Unexpected status code while creating user: {}",
                       ar.cause().getLocalizedMessage());
 
-                  ResponseBuilder responseBuilder =
-                      new ResponseBuilder(FAILED)
-                          .setTypeAndTitle(
-                              HttpStatus.SC_INTERNAL_SERVER_ERROR,
-                              ResponseUrn.INTERNAL_SERVER_ERROR_URN.getUrn())
-                          .setMessage("Unexpected status while creating user");
-                  promise.fail(responseBuilder.getResponse().toString());
+                  promise.fail(
+                      new ServiceException(0, "Unexpected error during processing request"));
                 }
               } else {
                 // Request Failed
                 LOGGER.error("Error: Failed to create user. Cause: {}", ar.cause().getMessage());
 
-                ResponseBuilder responseBuilder =
-                    new ResponseBuilder(FAILED)
-                        .setTypeAndTitle(
-                            HttpStatus.SC_INTERNAL_SERVER_ERROR,
-                            ResponseUrn.INTERNAL_SERVER_ERROR_URN.getUrn())
-                        .setMessage(CHECK_CREDENTIALS);
-                promise.fail(responseBuilder.getResponse().toString());
+                promise.fail(new ServiceException(0, "Unexpected error during processing request"));
               }
             });
 
@@ -822,6 +702,11 @@ public class DatabrokerServiceImpl implements DatabrokerService {
 
   @Override
   public Future<JsonObject> executeAdapterQueryRPC(JsonObject request) {
+    return null;
+  }
+
+  @Override
+  public Future<Void> publishMessage(JsonObject request, String toExchange, String routingKey) {
     return null;
   }
 

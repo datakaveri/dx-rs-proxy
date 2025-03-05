@@ -3,7 +3,7 @@ package iudx.rs.proxy.apiserver.query;
 import static iudx.rs.proxy.apiserver.util.ApiServerConstants.*;
 import static iudx.rs.proxy.common.HttpStatusCode.BAD_REQUEST;
 import static iudx.rs.proxy.common.ResponseUrn.*;
-import static iudx.rs.proxy.metering.util.Constants.ERROR;
+import static iudx.rs.proxy.apiserver.auditing.util.Constants.ERROR;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;

@@ -1,15 +1,13 @@
 package iudx.rs.proxy.apiserver.connector.service;
 
-import static iudx.rs.proxy.databroker.util.Constants.*;
-
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import iudx.rs.proxy.apiserver.connector.model.*;
 import iudx.rs.proxy.common.ResponseUrn;
-import iudx.rs.proxy.databroker.DatabrokerService;
 import iudx.rs.proxy.databroker.model.QueueRequest;
 import iudx.rs.proxy.databroker.model.UserPermissionRequest;
+import iudx.rs.proxy.databroker.service.DatabrokerService;
 import iudx.rs.proxy.databroker.util.PermissionOpType;
 import iudx.rs.proxy.databroker.util.Util;
 import iudx.rs.proxy.databroker.util.Vhosts;

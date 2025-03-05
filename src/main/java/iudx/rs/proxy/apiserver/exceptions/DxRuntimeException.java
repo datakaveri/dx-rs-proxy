@@ -25,16 +25,6 @@ public class DxRuntimeException extends RuntimeException {
     this.message = message;
   }
 
-  public DxRuntimeException(String message) {
-    super(message);
-    JsonObject json = new JsonObject(message);
-    String urnTitle = json.getString("title");
-
-    this.statusCode = json.getInteger("type");
-    this.urn = ResponseUrn.fromCode(urnTitle);
-    this.message = json.getString("detail", urn.getMessage());
-  }
-
   public DxRuntimeException(final int statusCode, final ResponseUrn urn, final Throwable cause) {
     super(cause);
     this.statusCode = statusCode;

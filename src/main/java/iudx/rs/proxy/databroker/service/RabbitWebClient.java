@@ -1,4 +1,4 @@
-package iudx.rs.proxy.databroker;
+package iudx.rs.proxy.databroker.service;
 
 import static iudx.rs.proxy.databroker.util.Constants.*;
 
@@ -21,7 +21,7 @@ public class RabbitWebClient {
   private final String username;
   private final String password;
 
-  RabbitWebClient(Vertx vertx, WebClientOptions webClientOptions, JsonObject propJson) {
+  public RabbitWebClient(Vertx vertx, WebClientOptions webClientOptions, JsonObject propJson) {
     this.username = propJson.getString("userName");
     this.password = propJson.getString("password");
     if (webClient == null) {

@@ -20,7 +20,6 @@ import iudx.rs.proxy.apiserver.connector.model.DeleteConnectorRequest;
 import iudx.rs.proxy.apiserver.connector.model.RegisterConnectorRequest;
 import iudx.rs.proxy.apiserver.connector.service.ConnectorService;
 import iudx.rs.proxy.apiserver.connector.service.ConnectorServiceImpl;
-import iudx.rs.proxy.apiserver.exceptions.DxRuntimeException;
 import iudx.rs.proxy.apiserver.handlers.AuthHandler;
 import iudx.rs.proxy.apiserver.handlers.FailureHandler;
 import iudx.rs.proxy.apiserver.handlers.TokenDecodeHandler;
@@ -29,7 +28,7 @@ import iudx.rs.proxy.apiserver.response.ResponseType;
 import iudx.rs.proxy.apiserver.util.ApiServerConstants;
 import iudx.rs.proxy.cache.CacheService;
 import iudx.rs.proxy.common.Api;
-import iudx.rs.proxy.databroker.DatabrokerService;
+import iudx.rs.proxy.databroker.service.DatabrokerService;
 import iudx.rs.proxy.databroker.util.Vhosts;
 import java.util.*;
 import org.apache.logging.log4j.LogManager;
@@ -111,10 +110,9 @@ public class ConnectorController {
                   response, ResponseType.Created.getCode(), connectorResult.toJson().encode());
             })
         .onFailure(
-            error -> {
-              LOGGER.error("Error during connector registration: {}", error.getMessage());
-
-              routingContext.fail(new DxRuntimeException(error.getMessage()));
+            failure -> {
+              LOGGER.error("Error during connector registration: {}", failure.getMessage());
+              routingContext.fail(failure);
             });
   }
 
@@ -142,7 +140,7 @@ public class ConnectorController {
         .onFailure(
             failure -> {
               LOGGER.error("Error: Connector/Queue deletion failed: {}", failure.getMessage());
-              routingContext.fail(new DxRuntimeException(failure.getMessage()));
+              routingContext.fail(failure);
             });
   }
 
@@ -163,7 +161,7 @@ public class ConnectorController {
         .onFailure(
             failure -> {
               LOGGER.error("Error: uer rest password failed: {}", failure.getMessage());
-              routingContext.fail(new DxRuntimeException(failure.getMessage()));
+              routingContext.fail(failure);
             });
   }
 

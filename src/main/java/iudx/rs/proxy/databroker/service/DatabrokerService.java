@@ -1,4 +1,4 @@
-package iudx.rs.proxy.databroker;
+package iudx.rs.proxy.databroker.service;
 
 import io.vertx.codegen.annotations.GenIgnore;
 import io.vertx.codegen.annotations.ProxyGen;
@@ -30,7 +30,7 @@ public interface DatabrokerService {
 
   Future<JsonObject> resetPasswordInRmq(String userid, String password);
 
-  //  Future<Void> publishMessage(JsonObject request, String toExchange, String routingKey);
+  Future<Void> publishMessage(JsonObject request, String toExchange, String routingKey);
 
   Future<JsonObject> executeAdapterQueryRPC(JsonObject request);
 }

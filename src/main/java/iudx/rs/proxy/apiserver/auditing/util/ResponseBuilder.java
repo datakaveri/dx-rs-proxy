@@ -1,6 +1,6 @@
-package iudx.rs.proxy.metering.util;
+package iudx.rs.proxy.apiserver.auditing.util;
 
-import static iudx.rs.proxy.metering.util.Constants.*;
+import static iudx.rs.proxy.apiserver.auditing.util.Constants.*;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -20,10 +20,10 @@ public class ResponseBuilder {
 
     if (200 == statusCode) {
       response.put(TYPE_KEY, ResponseUrn.SUCCESS_URN.getUrn());
-      response.put(TITLE, SUCCESS);
+      response.put(TITLE,  ResponseUrn.SUCCESS_URN.getMessage());
     } else if (204 == statusCode) {
       response.put(TYPE_KEY, statusCode);
-      response.put(TITLE, SUCCESS);
+      response.put(TITLE,  ResponseUrn.SUCCESS_URN.getMessage());
     } else {
       response.put(TYPE_KEY, statusCode);
       response.put(TITLE, ResponseUrn.BAD_REQUEST_URN.getUrn());

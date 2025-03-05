@@ -9,6 +9,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import iudx.rs.proxy.authenticator.model.JwtData;
 import iudx.rs.proxy.cache.CacheService;
+import iudx.rs.proxy.databroker.service.DatabrokerService;
 import iudx.rs.proxy.metering.MeteringService;
 import iudx.rs.proxy.optional.consentlogs.dss.PayloadSigningManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +37,7 @@ class ConsentLoggingServiceImplTest {
     @Mock
     private PayloadSigningManager payloadSigningManager;
     @Mock
-    private MeteringService meteringService;
+    private DatabrokerService databrokerService;
     @Mock
     private CacheService cacheServiceMock;
     private ConsentLoggingServiceImpl consentLoggingService;
@@ -46,7 +47,7 @@ class ConsentLoggingServiceImplTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         consentLoggingServiceInterface = mock(ConsentLoggingServiceImpl.class);
-        consentLoggingService = new ConsentLoggingServiceImpl(Vertx.vertx(), payloadSigningManager, meteringService, cacheServiceMock);
+        consentLoggingService = new ConsentLoggingServiceImpl(Vertx.vertx(), payloadSigningManager, databrokerService, cacheServiceMock);
     }
 
     @Test
