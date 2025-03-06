@@ -14,6 +14,7 @@ import iudx.rs.proxy.authenticator.AuthenticationService;
 import iudx.rs.proxy.authenticator.model.JwtData;
 import iudx.rs.proxy.common.HttpStatusCode;
 import iudx.rs.proxy.common.ResponseUrn;
+import iudx.rs.proxy.common.RoutingContextHelper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -39,6 +40,7 @@ public class TokenDecodeHandler implements Handler<RoutingContext> {
           if (decodeHandler.succeeded()) {
             JwtData jwtData = decodeHandler.result();
             context.data().put("jwtData", jwtData);
+            RoutingContextHelper.setJwtData(context,jwtData);
 
           } else {
             processAuthFailure(context, decodeHandler.cause().getMessage());

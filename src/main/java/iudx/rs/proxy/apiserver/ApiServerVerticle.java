@@ -143,7 +143,6 @@ public class ApiServerVerticle extends AbstractVerticle {
                 .handler(this::contextBodyCall)
                 .handler(this::handlePostEntitiesQuery)
                 .failureHandler(validationsFailureHandler);
-;
 
 
         new ConnectorController(router, apis, vertx, isAdexInstance, dxApiBasePath).setRouter();
