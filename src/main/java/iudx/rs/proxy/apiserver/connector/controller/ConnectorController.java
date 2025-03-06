@@ -68,7 +68,7 @@ public class ConnectorController {
 
     router
         .post(apis.getConnectorsPath())
-        .handler(auditingHandler::auditAfterApiEnded)
+        .handler(auditingHandler::handleApiAudit)
         .handler(postConnectorValidation)
         .handler(TokenDecodeHandler.create(vertx))
         .handler(AuthHandler.create(vertx, apis, isAdexInstance))
@@ -76,7 +76,7 @@ public class ConnectorController {
 
     router
         .delete(apis.getConnectorsPath())
-        .handler(auditingHandler::auditAfterApiEnded)
+        .handler(auditingHandler::handleApiAudit)
         .handler(TokenDecodeHandler.create(vertx))
         .handler(AuthHandler.create(vertx, apis, isAdexInstance))
         .handler(this::handleDeleteConnectors);

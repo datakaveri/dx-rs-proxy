@@ -2,7 +2,6 @@ package iudx.rs.proxy.apiserver.auditing.handler;
 
 import static iudx.rs.proxy.apiserver.auditing.util.Constants.AUDITING_EXCHANGEE;
 import static iudx.rs.proxy.apiserver.auditing.util.Constants.ROUTING_KEY;
-import static iudx.rs.proxy.apiserver.util.ApiServerConstants.*;
 import static iudx.rs.proxy.common.Constants.DATABROKER_SERVICE_ADDRESS;
 
 import io.vertx.core.Vertx;
@@ -37,7 +36,7 @@ public class AuditingHandler {
     this.databrokerService = DatabrokerService.createProxy(vertx, DATABROKER_SERVICE_ADDRESS);
   }
 
-  public void auditAfterApiEnded(RoutingContext context) {
+  public void handleApiAudit(RoutingContext context) {
     context.addBodyEndHandler(
         v -> {
           try {
@@ -53,6 +52,7 @@ public class AuditingHandler {
   public void publishAuditLogs(RoutingContext context) throws Exception {
     LOGGER.trace("AuditingHandler() started");
     if (!STATUS_CODES_TO_AUDIT.contains(context.response().getStatusCode())) {
+      LOGGER.debug("Skipping audit for status code: {}", context.response().getStatusCode());
       return;
     }
     JwtData jwtData = RoutingContextHelper.getJwtData(context);
