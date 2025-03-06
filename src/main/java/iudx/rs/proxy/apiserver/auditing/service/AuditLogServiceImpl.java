@@ -1,28 +1,30 @@
 package iudx.rs.proxy.apiserver.auditing.service;
 
-import static iudx.rs.proxy.apiserver.util.ApiServerConstants.*;
 import static iudx.rs.proxy.apiserver.auditing.util.Constants.*;
+import static iudx.rs.proxy.apiserver.util.ApiServerConstants.*;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import iudx.rs.proxy.apiserver.exceptions.DxRuntimeException;
 import iudx.rs.proxy.apiserver.auditing.model.AuditLogSearchRequest;
+import iudx.rs.proxy.apiserver.auditing.model.MonthlyOverviewResponse;
 import iudx.rs.proxy.apiserver.auditing.model.OverviewRequest;
+import iudx.rs.proxy.apiserver.auditing.util.ParamsValidation;
+import iudx.rs.proxy.apiserver.auditing.util.QueryBuilder;
+import iudx.rs.proxy.apiserver.auditing.util.ResponseBuilder;
+import iudx.rs.proxy.apiserver.exceptions.DxRuntimeException;
 import iudx.rs.proxy.cache.CacheService;
 import iudx.rs.proxy.cache.cacheImpl.CacheType;
 import iudx.rs.proxy.common.Api;
 import iudx.rs.proxy.common.ResponseUrn;
 import iudx.rs.proxy.database.DatabaseService;
-import iudx.rs.proxy.apiserver.auditing.util.DateValidation;
-import iudx.rs.proxy.apiserver.auditing.util.ParamsValidation;
-import iudx.rs.proxy.apiserver.auditing.util.QueryBuilder;
-import iudx.rs.proxy.apiserver.auditing.util.ResponseBuilder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -44,9 +46,9 @@ public class AuditLogServiceImpl implements AuditLogService {
   }
 
   @Override
-  public Future<JsonObject> executeAudigingSearchQuery(AuditLogSearchRequest searchRequest) {
+  public Future<JsonObject> executeAuditingSearchQuery(AuditLogSearchRequest searchRequest) {
     LOGGER.trace("Info: Read Query {}", searchRequest.toJson());
-    JsonObject request =  searchRequest.toJson();
+    JsonObject request = searchRequest.toJson();
 
     JsonObject validationCheck = validation.paramsCheck(searchRequest.toJson());
     if (validationCheck != null && validationCheck.containsKey(ERROR)) {
@@ -71,13 +73,11 @@ public class AuditLogServiceImpl implements AuditLogService {
                         .setCount(total)
                         .getResponse());
               }
-
               // If total count is zero, return empty response
               if (total == 0) {
                 return Future.succeededFuture(
                     new ResponseBuilder(FAILED).setTypeAndTitle(204).setCount(0).getResponse());
               }
-
               // Otherwise, fetch the full data
               return executeReadQueryForData(request);
             });
@@ -130,68 +130,52 @@ public class AuditLogServiceImpl implements AuditLogService {
   }
 
   @Override
-  public Future<JsonObject> monthlyOverview(OverviewRequest overviewRequest) {
-
-    if ((overviewRequest.getStartTime() != null && overviewRequest.getEndTime() == null)
-        || (overviewRequest.getStartTime() == null && overviewRequest.getEndTime() != null)) {
-      return Future.failedFuture(
-          new DxRuntimeException(
-              400, ResponseUrn.BAD_REQUEST_URN, "Invalid Start Time or End Time"));
-    }
-
-    if (overviewRequest.getStartTime() != null && overviewRequest.getEndTime() != null) {
-      JsonObject validationCheck = DateValidation.dateParamCheck(overviewRequest.toJson());
-      if (validationCheck != null && validationCheck.containsKey(ERROR)) {
-        return Future.failedFuture(
-            new DxRuntimeException(
-                400, ResponseUrn.BAD_REQUEST_URN, validationCheck.getString(ERROR)));
-      }
-    }
-
+  public Future<List<MonthlyOverviewResponse>> monthlyOverview(OverviewRequest overviewRequest) {
+    Promise<List<MonthlyOverviewResponse>> promise = Promise.promise();
     LOGGER.info("fetching monthlyOverview for role: {}", overviewRequest.getRole());
 
     if ("admin".equalsIgnoreCase(overviewRequest.getRole())
         || "consumer".equalsIgnoreCase(overviewRequest.getRole())) {
-      return executeQueryDatabaseOperation(
-          new JsonObject()
-              .put(QUERY_KEY, queryBuilder.buildMonthlyOverviewQueryNew(overviewRequest)));
-    }
 
+      String query = queryBuilder.buildMonthlyOverviewQueryNew(overviewRequest);
+
+      executeQueryDatabaseOperation(new JsonObject().put(QUERY_KEY, query))
+          .onSuccess(
+              result -> {
+                JsonArray jsonArray = result.getJsonArray("result");
+
+                List<MonthlyOverviewResponse> monthlyOverviewResponses =
+                    jsonArray.stream()
+                        .map(obj -> new MonthlyOverviewResponse((JsonObject) obj))
+                        .collect(Collectors.toList());
+                promise.complete(monthlyOverviewResponses);
+              });
+    }
     if ("provider".equalsIgnoreCase(overviewRequest.getRole())
         || "delegate".equalsIgnoreCase(overviewRequest.getRole())) {
-      return fetchProviderId(overviewRequest.getIid())
+      fetchProviderId(overviewRequest.getIid())
           .compose(
               providerId -> {
                 OverviewRequest request = overviewRequest.withUpdatedProviderId(providerId);
-
                 return executeQueryDatabaseOperation(
                     new JsonObject()
                         .put(QUERY_KEY, queryBuilder.buildMonthlyOverviewQueryNew(request)));
+              })
+          .onSuccess(
+              result -> {
+                JsonArray jsonArray = result.getJsonArray("result");
+                List<MonthlyOverviewResponse> monthlyOverviewResponses =
+                    jsonArray.stream()
+                        .map(obj -> new MonthlyOverviewResponse((JsonObject) obj))
+                        .collect(Collectors.toList());
+                promise.complete(monthlyOverviewResponses);
               });
     }
-
-    return Future.failedFuture("Invalid Role");
+    return promise.future();
   }
 
   @Override
   public Future<JsonObject> summaryOverview(OverviewRequest overviewRequest) {
-    String startTime = overviewRequest.getStartTime();
-    String endTime = overviewRequest.getEndTime();
-
-    if (startTime != null && endTime == null || startTime == null && endTime != null) {
-      return Future.failedFuture(
-          new DxRuntimeException(
-              400, ResponseUrn.BAD_REQUEST_URN, "Invalid Start Time or End time"));
-    }
-
-    if (startTime != null && endTime != null) {
-      JsonObject validationCheck = DateValidation.dateParamCheck(overviewRequest.toJson());
-      if (validationCheck != null && validationCheck.containsKey(ERROR)) {
-        return Future.failedFuture(
-            new DxRuntimeException(
-                400, ResponseUrn.BAD_REQUEST_URN, validationCheck.getString(ERROR)));
-      }
-    }
 
     String role = overviewRequest.getRole();
     if ("admin".equalsIgnoreCase(role) || "consumer".equalsIgnoreCase(role)) {
@@ -201,11 +185,9 @@ public class AuditLogServiceImpl implements AuditLogService {
           .compose(
               providerId -> {
                 OverviewRequest request = overviewRequest.withUpdatedProviderId(providerId);
-
                 return executeSummaryQuery(request);
               });
     }
-
     return Future.failedFuture("Invalid Role");
   }
 
@@ -234,7 +216,7 @@ public class AuditLogServiceImpl implements AuditLogService {
         .map(
             resultHandler -> {
               return new JsonObject()
-                  .put("type", "urn:dx:dm:Success")
+                  .put("type", "urn:dx:rs:Success")
                   .put("title", "Success")
                   .put("results", resultHandler);
             });
@@ -255,14 +237,13 @@ public class AuditLogServiceImpl implements AuditLogService {
           jsonArray.getJsonObject(i).getString("resourceid"),
           Integer.parseInt(jsonArray.getJsonObject(i).getString("count")));
 
-      // Add cache lookup to future list, recover null for failures
       futureList.add(cache.get(jsonObject).recover(f -> Future.succeededFuture(null)));
     }
 
     return CompositeFuture.all(new ArrayList<>(futureList))
         .map(
             composite -> {
-              List<Object> results = composite.list(); // Get results as list
+              List<Object> results = composite.list();
               JsonArray jsonArrayResult = new JsonArray();
 
               results.stream()
@@ -280,7 +261,7 @@ public class AuditLogServiceImpl implements AuditLogService {
                                 .put("count", resourceCount.get(res.getString("id"))));
                       });
 
-              return jsonArrayResult; // Return the manually constructed JsonArray
+              return jsonArrayResult;
             });
   }
 
