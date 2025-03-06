@@ -16,6 +16,7 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import iudx.rs.proxy.apiserver.auditing.handler.AuditingHandler;
 import iudx.rs.proxy.apiserver.connector.model.DeleteConnectorRequest;
 import iudx.rs.proxy.apiserver.connector.model.RegisterConnectorRequest;
 import iudx.rs.proxy.apiserver.connector.service.ConnectorService;
@@ -28,6 +29,7 @@ import iudx.rs.proxy.apiserver.response.ResponseType;
 import iudx.rs.proxy.apiserver.util.ApiServerConstants;
 import iudx.rs.proxy.cache.CacheService;
 import iudx.rs.proxy.common.Api;
+import iudx.rs.proxy.common.RoutingContextHelper;
 import iudx.rs.proxy.databroker.service.DatabrokerService;
 import iudx.rs.proxy.databroker.util.Vhosts;
 import java.util.*;
@@ -63,12 +65,15 @@ public class ConnectorController {
     connectorService = new ConnectorServiceImpl(brokerService);
     cache = CacheService.createProxy(vertx, CACHE_SERVICE_ADDRESS);
 
+    AuditingHandler auditingHandler = new AuditingHandler(vertx);
+
     router
         .post(apis.getConnectorsPath())
         .handler(postConnectorValidation)
         .handler(TokenDecodeHandler.create(vertx))
         .handler(AuthHandler.create(vertx, apis, isAdexInstance))
-        .handler(this::handlePostConnectors);
+        .handler(this::handlePostConnectors)
+        .handler(auditingHandler);
 
     router
         .delete(apis.getConnectorsPath())
@@ -108,6 +113,8 @@ public class ConnectorController {
               LOGGER.info("Success: [registerConnector]");
               handleSuccessResponse(
                   response, ResponseType.Created.getCode(), connectorResult.toJson().encode());
+              RoutingContextHelper.setResponseSize(routingContext,response.bytesWritten());
+              routingContext.next();
             })
         .onFailure(
             failure -> {

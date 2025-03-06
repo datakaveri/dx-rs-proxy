@@ -707,7 +707,25 @@ public class DatabrokerServiceImpl implements DatabrokerService {
 
   @Override
   public Future<Void> publishMessage(JsonObject request, String toExchange, String routingKey) {
-    return null;
+    Promise<Void> promise = Promise.promise();
+
+    Buffer buffer = Buffer.buffer(request.toString());
+    client
+        .basicPublish(toExchange, routingKey, buffer)
+        .onSuccess(
+            success -> {
+              LOGGER.info(
+                  "Message published successfully into exchange:{} with routing key: {}",
+                  toExchange,
+                  routingKey);
+              promise.complete();
+            })
+        .onFailure(
+            failure -> {
+              LOGGER.error("Failed to publish message: {}", failure.getMessage());
+              promise.fail(new ServiceException(0, "Unexpected error during processing request"));
+            });
+    return promise.future();
   }
 
   private String getVhost(Vhosts vhosts) {

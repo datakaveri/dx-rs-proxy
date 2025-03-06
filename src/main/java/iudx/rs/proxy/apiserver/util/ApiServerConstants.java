@@ -210,4 +210,10 @@ public class ApiServerConstants {
               ITEM_TYPE_RESOURCE_GROUP,
               ITEM_TYPE_RESOURCE_SERVER,
               ITEM_TYPE_PROVIDER));
+
+  public static final String HEADER_BEARER_AUTHORIZATION = "Authorization";
+  public static final String HEADER_TOKEN_BEARER = "Bearer";
+  public static final String STARTT = "starttime";
+  public static final String ENDT = "endtime";
+
 }

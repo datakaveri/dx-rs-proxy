@@ -21,6 +21,7 @@ import iudx.rs.proxy.authenticator.model.JwtData;
 import iudx.rs.proxy.common.Api;
 import iudx.rs.proxy.common.HttpStatusCode;
 import iudx.rs.proxy.common.ResponseUrn;
+import iudx.rs.proxy.common.RoutingContextHelper;
 import iudx.rs.proxy.optional.consentlogs.ConsentLoggingService;
 import java.util.List;
 import java.util.Map;
@@ -111,6 +112,7 @@ public class AuthHandler implements Handler<RoutingContext> {
             authInfo.put(DID, authHandler.result().getValue(DID));
             authInfo.put(DRL, authHandler.result().getValue(DRL));
             context.data().put(AUTHINFO, authInfo);
+            RoutingContextHelper.setId(context,authInfo.getString("id"));
           } else {
             processAuthFailure(context, authHandler.cause().getMessage());
             if (isAdexInstance) {
