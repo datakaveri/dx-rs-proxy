@@ -9,19 +9,22 @@ import static iudx.rs.proxy.common.ResponseUrn.UNAUTHORIZED_RESOURCE_URN;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-import iudx.rs.proxy.apiserver.handlers.AuthHandler;
-import iudx.rs.proxy.apiserver.handlers.FailureHandler;
-import iudx.rs.proxy.apiserver.handlers.TokenDecodeHandler;
-import iudx.rs.proxy.apiserver.response.ResponseType;
 import iudx.rs.proxy.apiserver.auditing.model.AuditLogSearchRequest;
 import iudx.rs.proxy.apiserver.auditing.model.OverviewRequest;
 import iudx.rs.proxy.apiserver.auditing.service.AuditLogService;
 import iudx.rs.proxy.apiserver.auditing.service.AuditLogServiceImpl;
+import iudx.rs.proxy.apiserver.auditing.util.DateValidation;
+import iudx.rs.proxy.apiserver.handlers.AuthHandler;
+import iudx.rs.proxy.apiserver.handlers.FailureHandler;
+import iudx.rs.proxy.apiserver.handlers.TokenDecodeHandler;
+import iudx.rs.proxy.apiserver.response.ResponseType;
 import iudx.rs.proxy.cache.CacheService;
 import iudx.rs.proxy.common.Api;
+import iudx.rs.proxy.common.ResponseUrn;
 import iudx.rs.proxy.database.DatabaseService;
 import iudx.rs.proxy.databroker.service.DatabrokerService;
 import org.apache.logging.log4j.LogManager;
@@ -71,12 +74,14 @@ public class AuditLogController {
 
     router
         .get(apis.getOverviewEndPoint())
+        .handler(this::ValidateDateTime)
         .handler(TokenDecodeHandler.create(vertx))
         .handler(AuthHandler.create(vertx, apis, isAdexInstance))
         .handler(this::handleMonthlyOverview);
 
     router
         .get(apis.getSummaryEndPoint())
+        .handler(this::ValidateDateTime)
         .handler(TokenDecodeHandler.create(vertx))
         .handler(AuthHandler.create(vertx, apis, isAdexInstance))
         .handler(this::handleSummaryRequest);
@@ -86,26 +91,25 @@ public class AuditLogController {
   }
 
   private void handleConsumerAuditDetailRequest(RoutingContext routingContext) {
-
     LOGGER.debug("Info: handleConsumerAuditDetailRequest() Started.");
     JsonObject authInfo = (JsonObject) routingContext.data().get("authInfo");
     HttpServerRequest request = routingContext.request();
 
-    AuditLogSearchRequest auditLogSearchRequest = AuditLogSearchRequest.fromHttpRequest(request, authInfo);
-    LOGGER.debug("AuditLogSearchRequest: {}", auditLogSearchRequest.toJson());
+    AuditLogSearchRequest auditLogSearchRequest =
+        AuditLogSearchRequest.fromHttpRequest(request, authInfo);
     HttpServerResponse response = routingContext.response();
 
     auditLogService
-        .executeAudigingSearchQuery(auditLogSearchRequest)
+        .executeAuditingSearchQuery(auditLogSearchRequest)
         .onSuccess(
             result -> {
-              LOGGER.debug("Table Reading Done.");
               String checkType = result.getString("type");
               if (checkType.equalsIgnoreCase("204")) {
                 handleSuccessResponse(
-                    response, ResponseType.NoContent.getCode(), result.toString());
+                    response, ResponseType.NoContent.getCode(), result.getJsonArray("results"));
               } else {
-                handleSuccessResponse(response, ResponseType.Ok.getCode(), result.toString());
+                handleSuccessResponse(
+                    response, ResponseType.Ok.getCode(), result.getJsonArray("results"));
               }
             })
         .onFailure(
@@ -120,22 +124,23 @@ public class AuditLogController {
     JsonObject authInfo = (JsonObject) routingContext.data().get("authInfo");
     HttpServerRequest request = routingContext.request();
 
-    AuditLogSearchRequest auditLogSearchRequest = AuditLogSearchRequest.fromHttpRequest(request, authInfo);
+    AuditLogSearchRequest auditLogSearchRequest =
+        AuditLogSearchRequest.fromHttpRequest(request, authInfo);
     LOGGER.debug("AuditLogSearchRequest: {}", auditLogSearchRequest.toJson());
 
     HttpServerResponse response = routingContext.response();
 
     auditLogService
-        .executeAudigingSearchQuery(auditLogSearchRequest)
+        .executeAuditingSearchQuery(auditLogSearchRequest)
         .onSuccess(
             result -> {
-              LOGGER.debug("Table Reading Done.");
               String checkType = result.getString("type");
               if (checkType.equalsIgnoreCase("204")) {
                 handleSuccessResponse(
-                    response, ResponseType.NoContent.getCode(), result.toString());
+                    response, ResponseType.NoContent.getCode(), result.getJsonArray("results"));
               } else {
-                handleSuccessResponse(response, ResponseType.Ok.getCode(), result.toString());
+                handleSuccessResponse(
+                    response, ResponseType.Ok.getCode(), result.getJsonArray("results"));
               }
             })
         .onFailure(
@@ -170,8 +175,11 @@ public class AuditLogController {
     auditLogService
         .monthlyOverview(monthlyOverviewRequest)
         .onSuccess(
-            result -> {
-              handleSuccessResponse(response, ResponseType.Ok.getCode(), result.encode());
+            overviewResponseList -> {
+              JsonArray result = new JsonArray();
+              overviewResponseList.forEach(
+                  overviewResponse -> result.add(overviewResponse.toJson()));
+              handleSuccessResponse(response, ResponseType.Ok.getCode(), result);
             })
         .onFailure(
             failureHandler -> {
@@ -187,7 +195,6 @@ public class AuditLogController {
     JsonObject authInfo = (JsonObject) routingContext.data().get("authInfo");
     authInfo.put(START_TIME, request.getParam(START_TIME));
     authInfo.put(END_TIME, request.getParam(END_TIME));
-    LOGGER.debug("auth info = " + authInfo);
     HttpServerResponse response = routingContext.response();
 
     String iid = authInfo.getString("iid");
@@ -211,10 +218,10 @@ public class AuditLogController {
               String checkType = result.getString("type");
               if (checkType.equalsIgnoreCase("204")) {
                 handleSuccessResponse(
-                    response, ResponseType.NoContent.getCode(), result.toString());
+                    response, ResponseType.NoContent.getCode(), result.getJsonArray("results"));
               } else {
-                LOGGER.debug("Successfull response: " + result.encode());
-                handleSuccessResponse(response, ResponseType.Ok.getCode(), result.toString());
+                handleSuccessResponse(
+                    response, ResponseType.Ok.getCode(), result.getJsonArray("results"));
               }
             })
         .onFailure(
@@ -225,7 +232,26 @@ public class AuditLogController {
             });
   }
 
-  private void handleSuccessResponse(HttpServerResponse response, int statusCode, String result) {
-    response.putHeader(CONTENT_TYPE, APPLICATION_JSON).setStatusCode(statusCode).end(result);
+  private void handleSuccessResponse(
+      HttpServerResponse response, int statusCode, JsonArray result) {
+    JsonObject resultJson =
+        new JsonObject()
+            .put(JSON_TYPE, ResponseUrn.SUCCESS_URN.getUrn())
+            .put(JSON_TITLE, ResponseUrn.SUCCESS_URN.getMessage())
+            .put("result", result);
+    response
+        .putHeader(CONTENT_TYPE, APPLICATION_JSON)
+        .setStatusCode(statusCode)
+        .end(resultJson.encode());
+  }
+
+  private void ValidateDateTime(RoutingContext routingContext) {
+    LOGGER.debug("info: ValidateDateTime() started");
+    HttpServerRequest request = routingContext.request();
+    String startTime = request.getParam(START_TIME);
+    String endTime = request.getParam(END_TIME);
+    if (DateValidation.dateParamCheck(startTime, endTime)) {
+      routingContext.next();
+    }
   }
 }

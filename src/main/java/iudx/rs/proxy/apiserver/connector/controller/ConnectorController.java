@@ -29,7 +29,6 @@ import iudx.rs.proxy.apiserver.response.ResponseType;
 import iudx.rs.proxy.apiserver.util.ApiServerConstants;
 import iudx.rs.proxy.cache.CacheService;
 import iudx.rs.proxy.common.Api;
-import iudx.rs.proxy.common.RoutingContextHelper;
 import iudx.rs.proxy.databroker.service.DatabrokerService;
 import iudx.rs.proxy.databroker.util.Vhosts;
 import java.util.*;
@@ -69,14 +68,15 @@ public class ConnectorController {
 
     router
         .post(apis.getConnectorsPath())
+        .handler(auditingHandler::handleApiAudit)
         .handler(postConnectorValidation)
         .handler(TokenDecodeHandler.create(vertx))
         .handler(AuthHandler.create(vertx, apis, isAdexInstance))
-        .handler(this::handlePostConnectors)
-        .handler(auditingHandler);
+        .handler(this::handlePostConnectors);
 
     router
         .delete(apis.getConnectorsPath())
+        .handler(auditingHandler::handleApiAudit)
         .handler(TokenDecodeHandler.create(vertx))
         .handler(AuthHandler.create(vertx, apis, isAdexInstance))
         .handler(this::handleDeleteConnectors);
@@ -113,8 +113,6 @@ public class ConnectorController {
               LOGGER.info("Success: [registerConnector]");
               handleSuccessResponse(
                   response, ResponseType.Created.getCode(), connectorResult.toJson().encode());
-              RoutingContextHelper.setResponseSize(routingContext,response.bytesWritten());
-              routingContext.next();
             })
         .onFailure(
             failure -> {

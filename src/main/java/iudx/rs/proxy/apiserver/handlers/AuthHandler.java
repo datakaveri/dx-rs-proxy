@@ -112,7 +112,9 @@ public class AuthHandler implements Handler<RoutingContext> {
             authInfo.put(DID, authHandler.result().getValue(DID));
             authInfo.put(DRL, authHandler.result().getValue(DRL));
             context.data().put(AUTHINFO, authInfo);
+
             RoutingContextHelper.setId(context,authInfo.getString("id"));
+            RoutingContextHelper.setEndPoint(context,authInfo.getString(API_ENDPOINT));
           } else {
             processAuthFailure(context, authHandler.cause().getMessage());
             if (isAdexInstance) {

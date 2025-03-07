@@ -6,15 +6,11 @@ public class AuditLogData {
   private String primaryKey;
   private String userid;
   private String id;
-  private String resourceGroup;
-  private String providerId;
   private String api;
   private long responseSize;
   private long epochTime;
   private String isoTime;
   private String delegatorId;
-  private String type;
-  private String event;
   private String origin;
 
   public String getApi() {
@@ -42,10 +38,6 @@ public class AuditLogData {
     this.responseSize = responseSize;
   }
 
-  public void setProviderId(String providerId) {
-    this.providerId = providerId;
-  }
-
   public void setPrimaryKey(String primaryKey) {
     this.primaryKey = primaryKey;
   }
@@ -54,20 +46,8 @@ public class AuditLogData {
     this.origin = origin;
   }
 
-  public void setResourceGroup(String resourceGroup) {
-    this.resourceGroup = resourceGroup;
-  }
-
   public void setDelegatorId(String delegatorId) {
     this.delegatorId = delegatorId;
-  }
-
-  public void setType(String type) {
-    this.type = type;
-  }
-
-  public void setEvent(String event) {
-    this.event = event;
   }
 
   public String getUserid() {
@@ -85,15 +65,11 @@ public class AuditLogData {
     json.put("primaryKey", primaryKey);
     json.put("userid", userid);
     json.put("id", id);
-    json.put("resourceGroup", resourceGroup);
-    json.put("providerId", providerId);
     json.put("api", api);
     json.put("responseSize", responseSize);
     json.put("epochTime", epochTime);
     json.put("isoTime", isoTime);
     json.put("delegatorId", delegatorId);
-    json.put("type", type);
-    json.put("event", event);
     json.put("origin", origin);
 
     return json;
