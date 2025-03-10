@@ -33,7 +33,7 @@ public class Constants {
   public static final String SUCCESS = "successful operations";
   public static final String DETAIL = "detail";
   public static final String TITLE = "title";
-  public static final String RESULTS = "results";
+  public static final String RESULT = "result";
   /* Database */
   public static final String ERROR = "Error";
   public static final String QUERY_KEY = "query";

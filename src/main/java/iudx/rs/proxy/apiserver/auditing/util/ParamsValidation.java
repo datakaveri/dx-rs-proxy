@@ -3,7 +3,9 @@ package iudx.rs.proxy.apiserver.auditing.util;
 import static iudx.rs.proxy.apiserver.auditing.util.Constants.*;
 
 import io.vertx.core.json.JsonObject;
+import iudx.rs.proxy.apiserver.exceptions.DxRuntimeException;
 import iudx.rs.proxy.common.Api;
+import iudx.rs.proxy.common.ResponseUrn;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
@@ -18,28 +20,26 @@ public class ParamsValidation {
     this.api = api;
   }
 
-  public JsonObject paramsCheck(JsonObject request) {
+  public boolean paramsCheck(JsonObject request) {
     if (request.getString(ENDPOINT).equals("/ngsi-ld/v1/provider/audit")
-            && request.getString(PROVIDER_ID) == null) {
-      //LOGGER.debug("Info: " + INVALID_PROVIDER_REQUIRED);
-      return new JsonObject().put(ERROR, "INVALID_PROVIDER_REQUIRED");
+        && request.getString(PROVIDER_ID) == null) {
+      throw new DxRuntimeException(
+          400, ResponseUrn.BAD_REQUEST_URN, "Provider id required but not found or null");
     }
     if (request.getString(TIME_RELATION) == null
         || !(request.getString(TIME_RELATION).equals(DURING)
             || request.getString(TIME_RELATION).equals(BETWEEN))) {
       LOGGER.debug("Info: " + TIME_RELATION_NOT_FOUND);
-      return new JsonObject().put(ERROR, TIME_RELATION_NOT_FOUND);
+      throw new DxRuntimeException(400, ResponseUrn.BAD_REQUEST_URN, TIME_RELATION_NOT_FOUND);
     }
 
     if (request.getString(START_TIME) == null || request.getString(END_TIME) == null) {
-      LOGGER.debug("Info: " + TIME_NOT_FOUND);
-      return new JsonObject().put(ERROR, TIME_NOT_FOUND);
+      throw new DxRuntimeException(400, ResponseUrn.BAD_REQUEST_URN, TIME_NOT_FOUND);
     }
 
     if (request.getString(USER_ID) == null || request.getString(USER_ID).isEmpty()) {
       LOGGER.debug("Info: " + USERID_NOT_FOUND);
-      request.put(ERROR, USERID_NOT_FOUND);
-      return request;
+      throw new DxRuntimeException(400, ResponseUrn.BAD_REQUEST_URN, USERID_NOT_FOUND);
     }
 
     // since + is treated as space in uri
@@ -54,7 +54,7 @@ public class ParamsValidation {
       LOGGER.debug("Parsed time: " + zdt.toString());
     } catch (DateTimeParseException e) {
       LOGGER.error("Invalid Date exception: " + e.getMessage());
-      return new JsonObject().put(ERROR, INVALID_DATE_TIME);
+      throw new DxRuntimeException(400, ResponseUrn.BAD_REQUEST_URN, INVALID_DATE_TIME);
     }
     ZonedDateTime startZdt = ZonedDateTime.parse(startTime);
     ZonedDateTime endZdt = ZonedDateTime.parse(endTime);
@@ -68,12 +68,9 @@ public class ParamsValidation {
         zonedDateTimeMinuteDifference);
 
     if (zonedDateTimeDayDifference < 0 || zonedDateTimeMinuteDifference < 0) {
-      LOGGER.error(INVALID_DATE_DIFFERENCE);
-      return new JsonObject().put(ERROR, INVALID_DATE_DIFFERENCE);
+      throw new DxRuntimeException(400, ResponseUrn.BAD_REQUEST_URN, INVALID_DATE_DIFFERENCE);
     }
-    request.put(START_TIME, startTime);
-    request.put(END_TIME, endTime);
-    return request;
+    return true;
   }
 
   private long zonedDateTimeDayDifference(ZonedDateTime startTime, ZonedDateTime endTime) {

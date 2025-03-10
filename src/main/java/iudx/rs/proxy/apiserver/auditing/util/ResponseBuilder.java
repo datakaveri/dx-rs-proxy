@@ -44,12 +44,12 @@ public class ResponseBuilder {
   }
 
   public ResponseBuilder setCount(int count) {
-    response.put(RESULTS, new JsonArray().add(new JsonObject().put(TOTAL, count)));
+    response.put(RESULT, new JsonArray().add(new JsonObject().put(TOTAL, count)));
     return this;
   }
 
   public ResponseBuilder setData(JsonArray jsonArray) {
-    response.put(RESULTS, jsonArray);
+    response.put(RESULT, jsonArray);
     return this;
   }
 

@@ -43,7 +43,6 @@ public class AuditingHandler {
             publishAuditLogs(context);
           } catch (Exception e) {
             LOGGER.error("Error: while publishing auditing log: " + e.getMessage());
-            throw new RuntimeException(e);
           }
         });
     context.next();
@@ -52,7 +51,7 @@ public class AuditingHandler {
   public void publishAuditLogs(RoutingContext context) throws Exception {
     LOGGER.trace("AuditingHandler() started");
     if (!STATUS_CODES_TO_AUDIT.contains(context.response().getStatusCode())) {
-      LOGGER.debug("Skipping audit for status code: {}", context.response().getStatusCode());
+      LOGGER.info("Skipping audit for status code: {}", context.response().getStatusCode());
       return;
     }
     JwtData jwtData = RoutingContextHelper.getJwtData(context);
@@ -79,7 +78,7 @@ public class AuditingHandler {
     auditLogData.setPrimaryKey(primaryKeySupplier.get());
     auditLogData.setEpochTime(epochSupplier.get());
     auditLogData.setIsoTime(isoTimeSupplier.get());
-    auditLogData.setResponseSize(getResponseSize(context));
+    auditLogData.setResponseSize(RoutingContextHelper.getResponseSize(context));
     auditLogData.setApi(RoutingContextHelper.getEndPoint(context));
     auditLogData.setId(RoutingContextHelper.getId(context));
     auditLogData.setUserid(jwtData.getSub());
@@ -93,9 +92,5 @@ public class AuditingHandler {
       return jwtData.getDid();
     }
     return jwtData.getSub();
-  }
-
-  private long getResponseSize(RoutingContext context) {
-    return context.response().bytesWritten();
   }
 }

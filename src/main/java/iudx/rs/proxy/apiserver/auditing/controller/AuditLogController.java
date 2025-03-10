@@ -1,5 +1,6 @@
 package iudx.rs.proxy.apiserver.auditing.controller;
 
+import static iudx.rs.proxy.apiserver.auditing.util.Constants.RESULT;
 import static iudx.rs.proxy.apiserver.response.ResponseUtil.generateResponse;
 import static iudx.rs.proxy.apiserver.util.ApiServerConstants.*;
 import static iudx.rs.proxy.common.Constants.*;
@@ -18,6 +19,7 @@ import iudx.rs.proxy.apiserver.auditing.model.OverviewRequest;
 import iudx.rs.proxy.apiserver.auditing.service.AuditLogService;
 import iudx.rs.proxy.apiserver.auditing.service.AuditLogServiceImpl;
 import iudx.rs.proxy.apiserver.auditing.util.DateValidation;
+import iudx.rs.proxy.apiserver.auditing.util.ParamsValidation;
 import iudx.rs.proxy.apiserver.handlers.AuthHandler;
 import iudx.rs.proxy.apiserver.handlers.FailureHandler;
 import iudx.rs.proxy.apiserver.handlers.TokenDecodeHandler;
@@ -41,6 +43,7 @@ public class AuditLogController {
   private DatabrokerService brokerService;
   private CacheService cache;
   private AuditLogService auditLogService;
+  private ParamsValidation paramsValidation;
   private Vertx vertx;
 
   public AuditLogController(
@@ -56,6 +59,7 @@ public class AuditLogController {
     databaseService = DatabaseService.createProxy(vertx, DB_SERVICE_ADDRESS);
     cache = CacheService.createProxy(vertx, CACHE_SERVICE_ADDRESS);
     auditLogService = new AuditLogServiceImpl(databaseService, cache, apis);
+    paramsValidation = new ParamsValidation(apis);
   }
 
   public void setRouter() {
@@ -98,18 +102,25 @@ public class AuditLogController {
     AuditLogSearchRequest auditLogSearchRequest =
         AuditLogSearchRequest.fromHttpRequest(request, authInfo);
     HttpServerResponse response = routingContext.response();
+    try {
+      paramsValidation.paramsCheck(auditLogSearchRequest.toJson());
+    } catch (Exception e) {
+      LOGGER.error("Error during validating params: {}", e.getMessage());
+      routingContext.fail(e);
+    }
 
     auditLogService
         .executeAuditingSearchQuery(auditLogSearchRequest)
         .onSuccess(
             result -> {
+              LOGGER.info(result);
               String checkType = result.getString("type");
               if (checkType.equalsIgnoreCase("204")) {
                 handleSuccessResponse(
-                    response, ResponseType.NoContent.getCode(), result.getJsonArray("results"));
+                    response, ResponseType.NoContent.getCode(), result.getJsonArray(RESULT));
               } else {
                 handleSuccessResponse(
-                    response, ResponseType.Ok.getCode(), result.getJsonArray("results"));
+                    response, ResponseType.Ok.getCode(), result.getJsonArray(RESULT));
               }
             })
         .onFailure(
@@ -128,6 +139,13 @@ public class AuditLogController {
         AuditLogSearchRequest.fromHttpRequest(request, authInfo);
     LOGGER.debug("AuditLogSearchRequest: {}", auditLogSearchRequest.toJson());
 
+    try {
+      paramsValidation.paramsCheck(auditLogSearchRequest.toJson());
+    } catch (Exception e) {
+      LOGGER.error("Error during validating params: {}", e.getMessage());
+      routingContext.fail(e);
+    }
+
     HttpServerResponse response = routingContext.response();
 
     auditLogService
@@ -137,10 +155,10 @@ public class AuditLogController {
               String checkType = result.getString("type");
               if (checkType.equalsIgnoreCase("204")) {
                 handleSuccessResponse(
-                    response, ResponseType.NoContent.getCode(), result.getJsonArray("results"));
+                    response, ResponseType.NoContent.getCode(), result.getJsonArray(RESULT));
               } else {
                 handleSuccessResponse(
-                    response, ResponseType.Ok.getCode(), result.getJsonArray("results"));
+                    response, ResponseType.Ok.getCode(), result.getJsonArray(RESULT));
               }
             })
         .onFailure(
@@ -246,7 +264,7 @@ public class AuditLogController {
   }
 
   private void ValidateDateTime(RoutingContext routingContext) {
-    LOGGER.debug("info: ValidateDateTime() started");
+    LOGGER.trace("info: ValidateDateTime() started");
     HttpServerRequest request = routingContext.request();
     String startTime = request.getParam(START_TIME);
     String endTime = request.getParam(END_TIME);

@@ -68,7 +68,7 @@ public class QueryBuilder {
         query.append(" and userid='$6' ".replace("$6", userId));
       }
     } else {
-      LOGGER.error("api {} resourceId {}", api, resourceId);
+      LOGGER.error("api {} ; resourceId {}", api, resourceId);
       query =
           new StringBuilder(
               CONSUMERID_TIME_INTERVAL_READ_QUERY
@@ -94,7 +94,6 @@ public class QueryBuilder {
     String endTime = request.getString(END_TIME);
     String userId = request.getString(USER_ID);
     String providerId = request.getString(PROVIDER_ID);
-    String databaseTableName = request.getString(TABLE_NAME);
     StringBuilder query;
     String api = request.getString(API);
     String resourceId = request.getString(RESOURCE_ID);
