@@ -29,6 +29,7 @@ import iudx.rs.proxy.apiserver.response.ResponseType;
 import iudx.rs.proxy.apiserver.util.ApiServerConstants;
 import iudx.rs.proxy.cache.CacheService;
 import iudx.rs.proxy.common.Api;
+import iudx.rs.proxy.common.RoutingContextHelper;
 import iudx.rs.proxy.databroker.service.DatabrokerService;
 import iudx.rs.proxy.databroker.util.Vhosts;
 import java.util.*;
@@ -111,6 +112,7 @@ public class ConnectorController {
         .onSuccess(
             connectorResult -> {
               LOGGER.info("Success: [registerConnector]");
+              RoutingContextHelper.setResponseSize(routingContext, 0);
               handleSuccessResponse(
                   response, ResponseType.Created.getCode(), connectorResult.toJson().encode());
             })
@@ -139,6 +141,7 @@ public class ConnectorController {
         .onSuccess(
             deleteHandler -> {
               LOGGER.info("success: [handleDeleteConnectors] " + deleteHandler);
+              RoutingContextHelper.setResponseSize(routingContext, 0);
               handleSuccessResponse(
                   response, ResponseType.Ok.getCode(), deleteHandler.toJson().encode());
             })

@@ -47,15 +47,8 @@ public class AuditLogServiceImpl implements AuditLogService {
 
   @Override
   public Future<JsonObject> executeAuditingSearchQuery(AuditLogSearchRequest searchRequest) {
-    LOGGER.trace("Info: Read Query {}", searchRequest.toJson());
+    LOGGER.debug("Info: Read Query {}", searchRequest.toJson());
     JsonObject request = searchRequest.toJson();
-
-    JsonObject validationCheck = validation.paramsCheck(searchRequest.toJson());
-    if (validationCheck != null && validationCheck.containsKey(ERROR)) {
-      return Future.failedFuture(
-          new DxRuntimeException(
-              400, ResponseUrn.BAD_REQUEST_URN, validationCheck.getString(ERROR)));
-    }
 
     String options = searchRequest.getOptions();
 
