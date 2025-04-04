@@ -18,10 +18,10 @@ public class ConsentLogRequestHandler implements Handler<RoutingContext> {
   private static final Logger LOGGER = LogManager.getLogger(ConsentLogRequestHandler.class);
 
   ConsentLoggingService consentLoggingService;
-  private boolean isAdexDeployment;
+  private boolean isConsentAuditRequired;
 
-  public ConsentLogRequestHandler(Vertx vertx, boolean isAdexDeployment) {
-    this.isAdexDeployment = isAdexDeployment;
+  public ConsentLogRequestHandler(Vertx vertx, boolean isConsentAuditRequired) {
+    this.isConsentAuditRequired = isConsentAuditRequired;
     consentLoggingService = ConsentLoggingService.createProxy(vertx, CONSEENTLOG_SERVICE_ADDRESS);
   }
 
@@ -29,7 +29,7 @@ public class ConsentLogRequestHandler implements Handler<RoutingContext> {
   public void handle(RoutingContext context) {
     LOGGER.trace("ConsentLogRequestHandler started");
 
-    if (isAdexDeployment) {
+    if (isConsentAuditRequired) {
       Future.future(f -> logRequestReceived(context));
       LOGGER.info("consent log : {}", "DATA_REQUESTED");
       context.next();
