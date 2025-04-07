@@ -1,4 +1,4 @@
-package org.cdpg.dx.rs.proxy.optional.consentlogs;
+package org.cdpg.dx.rs.proxy.optional.consentlogs.service;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -15,6 +15,7 @@ import org.cdpg.dx.auditing.model.AuditLog;
 import org.cdpg.dx.auditing.model.ConsentAuditLog;
 import org.cdpg.dx.cache.CacheService;
 import org.cdpg.dx.common.models.JwtData;
+import org.cdpg.dx.rs.proxy.optional.consentlogs.util.ConsentType;
 import org.cdpg.dx.rs.proxy.optional.consentlogs.dss.PayloadSigningManager;
 
 public class ConsentLoggingServiceImpl implements ConsentLoggingService {

@@ -1,4 +1,4 @@
-package org.cdpg.dx.rs.proxy.optional.consentlogs;
+package org.cdpg.dx.rs.proxy.optional.consentlogs.util;
 
 public enum ConsentType {
   DATA_REQUESTED,

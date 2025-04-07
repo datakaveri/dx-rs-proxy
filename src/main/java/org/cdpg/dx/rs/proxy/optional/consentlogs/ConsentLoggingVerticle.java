@@ -10,6 +10,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.cdpg.dx.cache.CacheService;
 import org.cdpg.dx.rs.proxy.optional.consentlogs.dss.PayloadSigningManager;
+import org.cdpg.dx.rs.proxy.optional.consentlogs.service.ConsentLoggingService;
+import org.cdpg.dx.rs.proxy.optional.consentlogs.service.ConsentLoggingServiceImpl;
 
 public class ConsentLoggingVerticle extends AbstractVerticle {
   private static final Logger LOGGER = LogManager.getLogger(ConsentLoggingVerticle.class);

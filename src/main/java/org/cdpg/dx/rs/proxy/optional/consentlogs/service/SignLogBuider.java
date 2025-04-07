@@ -1,4 +1,4 @@
-package org.cdpg.dx.rs.proxy.optional.consentlogs;
+package org.cdpg.dx.rs.proxy.optional.consentlogs.service;
 
 import io.vertx.core.json.JsonObject;
 import org.cdpg.dx.rs.proxy.optional.consentlogs.dss.SignablePayload;

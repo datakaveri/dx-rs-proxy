@@ -14,7 +14,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.cdpg.dx.auditing.model.AuditLog;
 import org.cdpg.dx.common.models.JwtData;
-import org.cdpg.dx.rs.proxy.optional.consentlogs.ConsentLoggingService;
+import org.cdpg.dx.rs.proxy.optional.consentlogs.service.ConsentLoggingService;
 import org.cdpg.dx.util.RoutingContextHelper;
 
 public class ConsentLogRequestHandler implements Handler<RoutingContext> {

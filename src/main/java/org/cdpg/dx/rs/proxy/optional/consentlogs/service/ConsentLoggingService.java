@@ -1,4 +1,4 @@
-package org.cdpg.dx.rs.proxy.optional.consentlogs;
+package org.cdpg.dx.rs.proxy.optional.consentlogs.service;
 
 import io.vertx.codegen.annotations.GenIgnore;
 import io.vertx.codegen.annotations.ProxyGen;
