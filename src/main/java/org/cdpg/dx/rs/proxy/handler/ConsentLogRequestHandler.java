@@ -6,12 +6,16 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
-import iudx.rs.proxy.authenticator.model.JwtData;
-import iudx.rs.proxy.optional.consentlogs.ConsentLoggingService;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.cdpg.dx.auditing.model.AuditLog;
+import org.cdpg.dx.common.models.JwtData;
+import org.cdpg.dx.rs.proxy.optional.consentlogs.service.ConsentLoggingService;
+import org.cdpg.dx.util.RoutingContextHelper;
 
 public class ConsentLogRequestHandler implements Handler<RoutingContext> {
 
@@ -30,7 +34,19 @@ public class ConsentLogRequestHandler implements Handler<RoutingContext> {
     LOGGER.trace("ConsentLogRequestHandler started");
 
     if (isConsentAuditRequired) {
-      Future.future(f -> logRequestReceived(context));
+      Optional<JwtData> jwtData = RoutingContextHelper.getJwtData(context);
+      if (jwtData.isEmpty()) {
+        LOGGER.error("JWT data is not present in the context");
+        context.fail(400, new IllegalArgumentException("JWT data is not present in the context"));
+        return;
+      }
+      logRequestReceived(jwtData.get())
+          .onSuccess(
+              auditLog -> {
+                List<AuditLog> logList = new ArrayList<>();
+                logList.add(auditLog);
+                RoutingContextHelper.setAuditingLog(context, logList);
+              });
       LOGGER.info("consent log : {}", "DATA_REQUESTED");
       context.next();
 
@@ -39,18 +55,21 @@ public class ConsentLogRequestHandler implements Handler<RoutingContext> {
     }
   }
 
-  private Future<Void> logRequestReceived(RoutingContext context) {
-    Promise<Void> promise = Promise.promise();
-    JwtData jwtData = (JwtData) context.data().get("jwtData");
-    JsonObject jsonObject = new JsonObject().put("logType", "DATA_REQUESTED");
+  private Future<AuditLog> logRequestReceived(JwtData jwtData) {
+    Promise<AuditLog> promise = Promise.promise();
     consentLoggingService
-        .log(jsonObject, jwtData)
-        .onSuccess(logHandler -> promise.complete())
+        .log("DATA_REQUESTED", jwtData)
+        .onSuccess(
+            consentAuditLog -> {
+              LOGGER.info("Consent log created successfully");
+              promise.complete(consentAuditLog);
+            })
         .onFailure(
             failure -> {
-              LOGGER.warn("failed info :{}", failure.getMessage());
-              promise.fail(failure.getMessage());
+              LOGGER.warn("Failed to create consent log: {}", failure.getMessage());
+              promise.fail(failure);
             });
+
     return promise.future();
   }
 }

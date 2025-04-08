@@ -50,7 +50,7 @@ public class PayloadSigningManager {
     return payloadSigningManager;
   }
 
-  public String signDocWithPKCS12(JsonObject documentToSign) {
+  public String signDocWithPKCS12(SignablePayload payload) {
     try (InputStream is = new FileInputStream(certFileName);
         Pkcs12SignatureToken token =
             new Pkcs12SignatureToken(is, new PasswordProtection(password.toCharArray()))) {
@@ -68,7 +68,7 @@ public class PayloadSigningManager {
       CommonCertificateVerifier commonCertificateVerifier = new CommonCertificateVerifier();
       CAdESService service = new CAdESService(commonCertificateVerifier);
 
-      DSSDocument doc = new InMemoryDocument(documentToSign.encode().getBytes());
+      DSSDocument doc = new InMemoryDocument(payload.toBytes());
       ToBeSigned dataToSign = service.getDataToSign(doc, signParameters);
       DigestAlgorithm digestAlgorithm = signParameters.getDigestAlgorithm();
       SignatureValue signatureValue = token.sign(dataToSign, digestAlgorithm, privateKey);

@@ -1,12 +1,13 @@
-package org.cdpg.dx.rs.proxy.optional.consentlogs;
+package org.cdpg.dx.rs.proxy.optional.consentlogs.service;
 
 import io.vertx.codegen.annotations.GenIgnore;
 import io.vertx.codegen.annotations.ProxyGen;
 import io.vertx.codegen.annotations.VertxGen;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import iudx.rs.proxy.authenticator.model.JwtData;
+import org.cdpg.dx.auditing.model.AuditLog;
+import org.cdpg.dx.common.models.JwtData;
+
 
 @ProxyGen
 @VertxGen
@@ -17,5 +18,5 @@ public interface ConsentLoggingService {
     return new ConsentLoggingServiceVertxEBProxy(vertx, address);
   }
 
-  Future<JsonObject> log(JsonObject logJson, JwtData jwtData);
+  Future<AuditLog> log(String consentType, JwtData jwtData);
 }

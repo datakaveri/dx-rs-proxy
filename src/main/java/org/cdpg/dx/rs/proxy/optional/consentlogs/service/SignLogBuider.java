@@ -1,8 +1,9 @@
-package org.cdpg.dx.rs.proxy.optional.consentlogs;
+package org.cdpg.dx.rs.proxy.optional.consentlogs.service;
 
 import io.vertx.core.json.JsonObject;
+import org.cdpg.dx.rs.proxy.optional.consentlogs.dss.SignablePayload;
 
-public class SignLogBuider {
+public class SignLogBuider implements SignablePayload {
   private String primaryKey;
   private String isoTime;
   private String aiu_id;
@@ -25,6 +26,7 @@ public class SignLogBuider {
     this.event = builder.event;
   }
 
+  @Override
   public JsonObject toJson() {
 
     JsonObject consentLogData =
