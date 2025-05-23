@@ -8,10 +8,10 @@ services:
   integTest:
     image: ghcr.io/datakaveri/rs-proxy-depl:latest
     env_file:
-      - /home/ubuntu/configs/.rs-proxy.env
+      - /home/ubuntu/configs/5.6.0/.rs-proxy.env
     volumes:
-      - /home/ubuntu/configs/rs-proxy-config-dev.json:/usr/share/app/configs/config.json
-      - /home/ubuntu/configs/keystore-rs-proxy.jks:/usr/share/app/configs/keystore.jks
+      - /home/ubuntu/configs/5.6.0/rs-proxy-config-dev.json:/usr/share/app/configs/config.json
+      - /home/ubuntu/configs/5.6.0/keystore-rs-proxy.jks:/usr/share/app/configs/keystore.jks
       - type: volume
         source: rs-proxy-volume
         target: /usr/share/app/storage/temp-dir
