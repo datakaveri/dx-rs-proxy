@@ -15,6 +15,16 @@ pipeline {
   }
 
   stages {
+
+    stage('Trivy Code Scan (Dependencies)') {
+      steps {
+        script {
+          sh '''
+            trivy fs --scanners vuln,secret,misconfig --output trivy-fs-report.txt .
+          '''
+        }
+      }
+    }
     
     stage('Build images') {
       steps{
@@ -26,10 +36,31 @@ pipeline {
       }
     }
 
+    stage('Trivy Docker Image Scan') {
+      steps {
+        script {
+          sh "trivy image --output trivy-dev-image-report.txt ${devImage.imageName()}"
+          sh "trivy image --output trivy-depl-image-report.txt ${deplImage.imageName()}"
+        }
+      }
+    }
+    stage('Archive Trivy Reports') {
+      steps {
+        archiveArtifacts artifacts: 'trivy-*.txt', allowEmptyArchive: true
+        publishHTML(target: [
+          allowMissing: true,
+          keepAll: true,
+          reportDir: '.',
+          reportFiles: 'trivy-fs-report.txt, trivy-dev-image-report.txt, trivy-depl-image-report.txt',
+          reportName: 'Trivy Reports'
+        ])
+      }
+    }
+
     stage('Unit Tests and Code Coverage Test'){
       steps{
         script{
-          sh 'cp /home/ubuntu/configs/rs-proxy-config-test.json ./secrets/all-verticles-configs/config-test.json'
+          sh 'cp /home/ubuntu/configs/5.6.0/rs-proxy-config-test.json ./secrets/all-verticles-configs/config-test.json'
           catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
               sh "mvn clean test checkstyle:checkstyle pmd:pmd"
             }  
@@ -91,7 +122,7 @@ pipeline {
           script{
             startZap ([host: '0.0.0.0', port: 8090, zapHome: '/var/lib/jenkins/tools/com.cloudbees.jenkins.plugins.customtools.CustomTool/OWASP_ZAP/ZAP_2.11.0'])
             sh 'curl http://0.0.0.0:8090/JSON/pscan/action/disableScanners/?ids=10096'
-            sh 'HTTP_PROXY=\'127.0.0.1:8090\' newman run /var/lib/jenkins/iudx/rs-proxy/Newman/ADEX-Resource-Proxy-Server-Consumer-APIs.postman_collection.json -e /home/ubuntu/configs/rs-proxy-postman-env.json -n 2 --insecure -r htmlextra --reporter-htmlextra-export /var/lib/jenkins/iudx/rs-proxy/Newman/report/report.html --reporter-htmlextra-skipSensitiveData'
+            sh 'HTTP_PROXY=\'127.0.0.1:8090\' newman run /var/lib/jenkins/iudx/rs-proxy/Newman/ADEX-Resource-Proxy-Server-Consumer-APIs.postman_collection.json -e /home/ubuntu/configs/5.6.0/rs-proxy-postman-env.json -n 2 --insecure -r htmlextra --reporter-htmlextra-export /var/lib/jenkins/iudx/rs-proxy/Newman/report/report.html --reporter-htmlextra-skipSensitiveData'
             runZapAttack()
             }
         }
@@ -116,7 +147,7 @@ pipeline {
       }
     }
 
-    stage('Continuous Deployment') {
+    stage('Push Images') {
       when {
         allOf {
           anyOf {
@@ -127,62 +158,25 @@ pipeline {
             triggeredBy cause: 'UserIdCause'
           }
           expression {
-            return env.GIT_BRANCH == 'origin/main';
+            return env.GIT_BRANCH == 'origin/5.6.0';
           }
         }
       }
-      stages {
-        stage('Push Images') {
-          steps {
-            script {
-              docker.withRegistry( registryUri, registryCredential ) {
-                devImage.push("5.6.0-alpha-${env.GIT_HASH}")
-                deplImage.push("5.6.0-alpha-${env.GIT_HASH}")
-              }
-            }
+  	steps {
+    	  script {
+          docker.withRegistry( registryUri, registryCredential ) {
+        	devImage.push("5.6.0-${env.GIT_HASH}")
+        	deplImage.push("5.6.0-${env.GIT_HASH}")
           }
-        }
-        stage('Docker Swarm deployment') {
-          steps {
-            script {
-              sh "ssh azureuser@docker-swarm 'docker service update rs-proxy_rs-proxy-adex --image ghcr.io/datakaveri/rs-proxy-depl:5.6.0-alpha-${env.GIT_HASH}'"
-              sh 'sleep 30'
-            }
-          }
-          post{
-            failure{
-              error "Failed to deploy image in Docker Swarm"
-            }
-          }          
-        }
-        stage('Integration test on swarm deployment') {
-          steps {
-            node('built-in') {
-              script{
-                sh 'newman run /var/lib/jenkins/iudx/rs-proxy/Newman/ADEX-Resource-Proxy-Server-Consumer-APIs.postman_collection.json -e /home/ubuntu/configs/cd/rs-proxy-postman-env.json --insecure -r htmlextra --reporter-htmlextra-export /var/lib/jenkins/iudx/rs-proxy/Newman/report/cd-report.html --reporter-htmlextra-skipSensitiveData'
-              }
-            }
-          }
-          post{
-            always{
-              node('built-in') {
-                script{
-                  publishHTML([allowMissing: false, alwaysLinkToLastBuild: true, keepAll: true, reportDir: '/var/lib/jenkins/iudx/rs-proxy/Newman/report/', reportFiles: 'cd-report.html', reportTitles: '', reportName: 'Docker-Swarm Integration Test Report'])
-                }
-              }
-            }
-            failure{
-              error "Test failure. Stopping pipeline execution!"
-            }
-          }
-        }
-      }
+    	  }
+  	}
     }
+
   }
   post{
     failure{
       script{
-        if (env.GIT_BRANCH == 'origin/main')
+        if (env.GIT_BRANCH == 'origin/5.6.0')
         emailext recipientProviders: [buildUser(), developers()], to: '$RS_PROXY_RECIPIENTS, $DEFAULT_RECIPIENTS', subject: '$PROJECT_NAME - Build # $BUILD_NUMBER - $BUILD_STATUS!', body: '''$PROJECT_NAME - Build # $BUILD_NUMBER - $BUILD_STATUS:
 Check console output at $BUILD_URL to view the results.'''
       }
