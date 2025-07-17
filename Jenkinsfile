@@ -15,6 +15,37 @@ pipeline {
   }
 
   stages {
+
+    stage('Check for Important Changes') {
+      when {
+        not {
+          anyOf {
+            changeset "docker/**"
+            changeset "docs/**"
+            changeset "pom.xml"
+            changeset "src/main/**"
+            triggeredBy cause: 'UserIdCause'
+          }
+        }
+      }
+      steps {
+        echo 'No relevant changes detected. Skipping the rest of the pipeline.'
+        script {
+          currentBuild.result = 'NOT_BUILT'
+          error("No changes in important paths. Pipeline aborted.")
+        }
+      }
+    }
+
+    stage('Trivy Code Scan (Dependencies)') {
+      steps {
+        script {
+          sh '''
+            trivy fs --scanners vuln,secret,misconfig --output trivy-fs-report.txt .
+          '''
+        }
+      }
+    }
     
     stage('Build images') {
       steps{
@@ -22,6 +53,27 @@ pipeline {
           echo 'Pulled - ' + env.GIT_BRANCH
           devImage = docker.build( devRegistry, "-f ./docker/dev.dockerfile .")
           deplImage = docker.build( deplRegistry, "-f ./docker/depl.dockerfile .")
+        }
+      }
+    }
+
+    stage('Trivy Docker Image Scan and Report') {
+      steps {
+        script {
+          sh "trivy image --output trivy-dev-image-report.txt ${devImage.imageName()}"
+          sh "trivy image --output trivy-depl-image-report.txt ${deplImage.imageName()}"
+        }
+      }
+      post {
+        always {
+          archiveArtifacts artifacts: 'trivy-*.txt', allowEmptyArchive: true
+          publishHTML(target: [
+            allowMissing: true,
+            keepAll: true,
+            reportDir: '.',
+            reportFiles: 'trivy-fs-report.txt, trivy-dev-image-report.txt, trivy-depl-image-report.txt',
+            reportName: 'Trivy Reports'
+          ])
         }
       }
     }
@@ -122,26 +174,17 @@ pipeline {
 
     stage('Continuous Deployment') {
       when {
-        allOf {
-          anyOf {
-            changeset "docker/**"
-            changeset "docs/**"
-            changeset "pom.xml"
-            changeset "src/main/**"
-            triggeredBy cause: 'UserIdCause'
-          }
           expression {
             return env.GIT_BRANCH == 'origin/main';
           }
         }
-      }
       stages {
         stage('Push Images') {
           steps {
             script {
               docker.withRegistry( registryUri, registryCredential ) {
-                devImage.push("5.6.0-alpha-${env.GIT_HASH}")
-                deplImage.push("5.6.0-alpha-${env.GIT_HASH}")
+                devImage.push("6.0.0-alpha-${env.GIT_HASH}")
+                deplImage.push("6.0.0-alpha-${env.GIT_HASH}")
               }
             }
           }
@@ -149,7 +192,7 @@ pipeline {
         stage('Docker Swarm deployment') {
           steps {
             script {
-              sh "ssh azureuser@docker-swarm 'docker service update rs-proxy_rs-proxy-adex --image ghcr.io/datakaveri/rs-proxy-depl:5.6.0-alpha-${env.GIT_HASH}'"
+              sh "ssh azureuser@docker-swarm 'docker service update rs-proxy_rs-proxy-adex --image ghcr.io/datakaveri/rs-proxy-depl:6.0.0-alpha-${env.GIT_HASH}'"
               sh 'sleep 30'
             }
           }
