@@ -52,6 +52,7 @@ public class PayloadSigningManager {
   }
 
   public String signDocWithPKCS12(JsonObject documentToSign) {
+    LOGGER.info("file path : {}", certFileName);
     try (InputStream is = new FileInputStream(certFileName);
         Pkcs12SignatureToken token =
             new Pkcs12SignatureToken(is, new PasswordProtection(password.toCharArray()))) {
