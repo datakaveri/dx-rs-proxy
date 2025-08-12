@@ -219,7 +219,7 @@ public class DatabrokerServiceImpl implements DatabrokerService {
 
             long timerId =
                 vertx.setTimer(
-                    20000,
+                    300000,
                     timeout -> {
                       LOGGER.info("max wait time elapsed for consumer, cancelling consumer");
                       rmqConsumer.cancel();
