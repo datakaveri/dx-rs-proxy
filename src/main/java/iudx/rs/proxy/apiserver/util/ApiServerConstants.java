@@ -68,7 +68,7 @@ public class ApiServerConstants {
   public static final String RESET_PWD = "/user/resetPassword";
   public static final String STARTT = "starttime";
   public static final String ENDT = "endtime";
-
+  public static final String ACCESSIBLE_ATTRS = "accessibleAttrs";
   public static final String API_ENDPOINT = "apiEndpoint";
   public static final String API_METHOD = "method";
   public static final String ID = "id";
@@ -87,7 +87,6 @@ public class ApiServerConstants {
   public static final String NGSILDQUERY_TIMEREL = "timerel";
   public static final String NGSILDQUERY_TIME = "time";
   public static final String NGSILDQUERY_ENDTIME = "endtime";
-  public static final String NGSILDQUERY_OPERATOR = "operator";
   public static final String NGSILDQUERY_GEOPROPERTY = "geoproperty";
   public static final String NGSILDQUERY_TIMEPROPERTY = "timeproperty";
   public static final String NGSILDQUERY_MAXDISTANCE = "maxdistance";
@@ -138,7 +137,6 @@ public class ApiServerConstants {
   public static final String MSG_BAD_QUERY = "Bad query";
 
   // Validations
-  public static final int VALIDATION_ID_MIN_LEN = 0;
   public static final int VALIDATION_ID_MAX_LEN = 512;
   public static final Pattern VALIDATION_ID_PATTERN =
       Pattern.compile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
@@ -165,7 +163,6 @@ public class ApiServerConstants {
   public static final List<String> VALIDATION_ALLOWED_TEMPORAL_REL =
       List.of("after", "before", "during", "between");
 
-  public static final String VALIDATION_Q_ATTR_PATTERN = "^[a-zA-Z0-9_]{1,100}+$";
   public static final String MSG_INVALID_PARAM = "Invalid parameter in request.";
   public static final String JSON_LAT = "lat";
   public static final String JSON_LON = "lon";

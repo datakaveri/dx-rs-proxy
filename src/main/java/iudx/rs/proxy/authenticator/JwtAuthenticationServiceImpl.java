@@ -1,7 +1,6 @@
 package iudx.rs.proxy.authenticator;
 
-import static iudx.rs.proxy.apiserver.util.ApiServerConstants.PII;
-import static iudx.rs.proxy.apiserver.util.ApiServerConstants.PPB_NUMBER;
+import static iudx.rs.proxy.apiserver.util.ApiServerConstants.*;
 import static iudx.rs.proxy.authenticator.Constants.*;
 
 import io.vertx.core.*;
@@ -145,6 +144,14 @@ public class JwtAuthenticationServiceImpl implements AuthenticationService {
                 jsonResponse.put(DID, result.jwtData.getDid());
                 jsonResponse.put(JSON_APD, result.jwtData.getApd());
                 jsonResponse.put(JSON_CONS, result.jwtData.getCons());
+                if (result.jwtData.getCons() != null) {
+                  JsonArray accessibleAttrs = result.jwtData.getCons().getJsonArray("attrs");
+                  if (accessibleAttrs == null || accessibleAttrs.isEmpty()) {
+                    jsonResponse.put(ACCESSIBLE_ATTRS, new JsonArray());
+                  } else {
+                    jsonResponse.put(ACCESSIBLE_ATTRS, accessibleAttrs);
+                  }
+                }
                 return Future.succeededFuture(jsonResponse);
               } else {
                 return validateAccess(result.jwtData, result.isOpen, authenticationInfo);
@@ -339,6 +346,14 @@ public class JwtAuthenticationServiceImpl implements AuthenticationService {
       jsonResponse.put(ROLE, jwtData.getRole());
       jsonResponse.put(DRL, jwtData.getDrl());
       jsonResponse.put(DID, jwtData.getDid());
+      if (jwtData.getCons() != null) {
+        JsonArray accessibleAttrs = jwtData.getCons().getJsonArray("attrs");
+        if (accessibleAttrs == null || accessibleAttrs.isEmpty()) {
+          jsonResponse.put(ACCESSIBLE_ATTRS, new JsonArray());
+        } else {
+          jsonResponse.put(ACCESSIBLE_ATTRS, accessibleAttrs);
+        }
+      }
       return Future.succeededFuture(jsonResponse);
     }
 
@@ -366,6 +381,14 @@ public class JwtAuthenticationServiceImpl implements AuthenticationService {
       jsonResponse.put(ROLE, jwtData.getRole());
       jsonResponse.put(DRL, jwtData.getDrl());
       jsonResponse.put(DID, jwtData.getDid());
+      if (jwtData.getCons() != null) {
+        JsonArray accessibleAttrs = jwtData.getCons().getJsonArray("attrs");
+        if (accessibleAttrs == null || accessibleAttrs.isEmpty()) {
+          jsonResponse.put(ACCESSIBLE_ATTRS, new JsonArray());
+        } else {
+          jsonResponse.put(ACCESSIBLE_ATTRS, accessibleAttrs);
+        }
+      }
       promise.complete(jsonResponse);
     } else {
       LOGGER.error("failed - no access provided to endpoint");

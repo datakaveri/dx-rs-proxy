@@ -18,16 +18,17 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.HashMap;
 import java.util.stream.Stream;
 
 import static iudx.rs.proxy.apiserver.util.ApiServerConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.atLeast;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(VertxExtension.class)
 @ExtendWith(MockitoExtension.class)
@@ -62,6 +63,7 @@ public void testToJson(Vertx vertx, VertxTestContext testContext) {
     map.add(NGSILDQUERY_ID, "id1");
     map.add(NGSILDQUERY_ATTRIBUTE, "attr1");
     NGSILDQueryParams params = new NGSILDQueryParams(map);
+
     JsonObject json = qm.toJson(params, false);
 
     assertTrue(json.containsKey(NGSILDQUERY_ID));
@@ -81,6 +83,7 @@ public void testToJson(Vertx vertx, VertxTestContext testContext) {
         map.add(NGSILDQUERY_GEOMETRY, "point");
         map.add(NGSILDQUERY_COORDINATES, "[8.6846,49.40606]");
         map.add(NGSILDQUERY_GEOPROPERTY, "location");
+        map.add("attrs", "id");
         NGSILDQueryParams params = new NGSILDQueryParams(map);
 
         JsonObject json = qm.toJson(params, false);
