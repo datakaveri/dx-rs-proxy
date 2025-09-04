@@ -4,7 +4,6 @@ import static iudx.rs.proxy.apiserver.util.ApiServerConstants.*;
 import static iudx.rs.proxy.apiserver.util.Util.toList;
 import static iudx.rs.proxy.common.ResponseUrn.INVALID_GEO_VALUE_URN;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
@@ -15,12 +14,10 @@ import iudx.rs.proxy.apiserver.validation.types.*;
 import iudx.rs.proxy.cache.CacheService;
 import iudx.rs.proxy.cache.cacheImpl.CacheType;
 import iudx.rs.proxy.common.HttpStatusCode;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -247,59 +244,28 @@ public class ParamsValidator {
 
   public Future<List<String>> getApplicableFilters(String id) {
     Promise<List<String>> promise = Promise.promise();
-    JsonObject cacheRequests = new JsonObject();
-    cacheRequests.put("type", CacheType.CATALOGUE_CACHE);
-    cacheRequests.put("key", id);
-    Future<JsonObject> groupIdFuture = cacheService.get(cacheRequests);
-    groupIdFuture.onComplete(
-        grpId -> {
-          if (grpId.succeeded()) {
-            Set<String> type = new HashSet<String>(grpId.result().getJsonArray("type").getList());
-            Set<String> itemTypeSet =
-                type.stream().map(e -> e.split(":")[1]).collect(Collectors.toSet());
-            itemTypeSet.retainAll(ITEM_TYPES);
+    JsonObject cacheRequest =
+        new JsonObject().put("type", CacheType.CATALOGUE_CACHE).put("key", id);
 
-            String groupId;
-            if (!itemTypeSet.contains("Resource")) {
-              groupId = id;
-            } else {
-              groupId = grpId.result().getString("resourceGroup");
-            }
-
-            LOGGER.debug("groupId = " + groupId);
-            JsonObject cacheRequest = new JsonObject();
-            cacheRequest.put("type", CacheType.CATALOGUE_CACHE);
-            cacheRequest.put("key", groupId);
-            Future<JsonObject> groupFilter = cacheService.get(cacheRequest);
-            JsonObject itemCacheRequest = cacheRequest.copy();
-            itemCacheRequest.put("key", id);
-            Future<JsonObject> itemFilters = cacheService.get(itemCacheRequest);
-            List<String> filters = new ArrayList<String>();
-            CompositeFuture.any(List.of(groupFilter, itemFilters))
-                .onComplete(
-                    ar -> {
-                      if (ar.failed()) {
-                        promise.fail("no filters available for : " + id);
-                        return;
-                      }
-                      if (groupFilter.result() != null
-                          && groupFilter.result().containsKey("iudxResourceAPIs")) {
-                        filters.addAll(
-                            toList(groupFilter.result().getJsonArray("iudxResourceAPIs")));
-                        promise.complete(filters);
-                      }
-
-                      if (itemFilters.result() != null
-                          && itemFilters.result().containsKey("iudxResourceAPIs")) {
-                        filters.addAll(
-                            toList(itemFilters.result().getJsonArray("iudxResourceAPIs")));
-                        promise.complete(filters);
-                      }
-                    });
-          } else {
-            LOGGER.debug("Failed : " + grpId.cause().getMessage());
-          }
-        });
+    cacheService
+        .get(cacheRequest)
+        .onComplete(
+            ar -> {
+              if (ar.succeeded()) {
+                JsonObject result = ar.result();
+                if (result != null && result.containsKey("iudxResourceAPIs")) {
+                  List<String> filters = toList(result.getJsonArray("iudxResourceAPIs"));
+                  if (!filters.isEmpty()) {
+                    promise.complete(filters);
+                    return;
+                  }
+                }
+                promise.fail("no filters available for : " + id);
+              } else {
+                LOGGER.debug("Failed : " + ar.cause().getMessage());
+                promise.fail(ar.cause().getMessage());
+              }
+            });
     return promise.future();
   }
 }
