@@ -84,7 +84,7 @@ public class DatabrokerServiceImpl implements DatabrokerService {
 
     String routingKey = request.getJsonArray("id").getString(0);
 
-    LOGGER.debug("queue declared : {}", replyQueue);
+    /*LOGGER.debug("queue declared : {}", replyQueue);*/
     Buffer buffer = Buffer.buffer(request.toString());
     client.basicPublish(
         "rpc-adapter-requests",
@@ -214,6 +214,7 @@ public class DatabrokerServiceImpl implements DatabrokerService {
         replyQueueName,
         queueOption,
         rabbitMQConsumerResult -> {
+            LOGGER.debug("rabbitMQConsumerResult queue : {}", rabbitMQConsumerResult.succeeded());
           if (rabbitMQConsumerResult.succeeded()) {
             RabbitMQConsumer rmqConsumer = rabbitMQConsumerResult.result();
 

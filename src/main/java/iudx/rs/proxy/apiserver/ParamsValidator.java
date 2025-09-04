@@ -250,6 +250,7 @@ public class ParamsValidator {
     JsonObject cacheRequests = new JsonObject();
     cacheRequests.put("type", CacheType.CATALOGUE_CACHE);
     cacheRequests.put("key", id);
+
     Future<JsonObject> groupIdFuture = cacheService.get(cacheRequests);
     groupIdFuture.onComplete(
         grpId -> {
@@ -270,34 +271,43 @@ public class ParamsValidator {
             JsonObject cacheRequest = new JsonObject();
             cacheRequest.put("type", CacheType.CATALOGUE_CACHE);
             cacheRequest.put("key", groupId);
+
             Future<JsonObject> groupFilter = cacheService.get(cacheRequest);
             JsonObject itemCacheRequest = cacheRequest.copy();
             itemCacheRequest.put("key", id);
             Future<JsonObject> itemFilters = cacheService.get(itemCacheRequest);
-            List<String> filters = new ArrayList<String>();
-            CompositeFuture.any(List.of(groupFilter, itemFilters))
+
+            List<String> filters = new ArrayList<>();
+            CompositeFuture.all(List.of(groupFilter, itemFilters))
                 .onComplete(
                     ar -> {
                       if (ar.failed()) {
                         promise.fail("no filters available for : " + id);
                         return;
                       }
-                      if (groupFilter.result() != null
-                          && groupFilter.result().containsKey("iudxResourceAPIs")) {
+
+                      // Add group level filters
+                      if (groupFilter.result().containsKey("iudxResourceAPIs")) {
                         filters.addAll(
                             toList(groupFilter.result().getJsonArray("iudxResourceAPIs")));
-                        promise.complete(filters);
                       }
 
-                      if (itemFilters.result() != null
-                          && itemFilters.result().containsKey("iudxResourceAPIs")) {
+                      // Add item level filters
+                      if (itemFilters.result().containsKey("iudxResourceAPIs")) {
                         filters.addAll(
                             toList(itemFilters.result().getJsonArray("iudxResourceAPIs")));
+                      }
+
+                      // Complete only after both filters are checked
+                      if (filters.isEmpty()) {
+                        promise.fail("no filters available for : " + id);
+                      } else {
                         promise.complete(filters);
                       }
                     });
           } else {
             LOGGER.debug("Failed : " + grpId.cause().getMessage());
+            promise.fail(grpId.cause().getMessage());
           }
         });
     return promise.future();
